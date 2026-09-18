@@ -5,6 +5,7 @@ from pydantic import BaseModel
 from .llm import LLM, verified
 from .models import PolicyQuote, ResolvedRule, Rule
 from .retrieval import CorpusIndex
+from .tracelog import Trace
 
 TOP_K = 3
 MAX_DOC_CHARS = 3000
@@ -27,15 +28,48 @@ class ExtractAnswer(BaseModel):
     items: list[ExtractItem] = []
 
 
-def build_digest(rules: list[Rule], index: CorpusIndex, llm: LLM) -> list[ResolvedRule]:
+def build_digest(
+    rules: list[Rule], index: CorpusIndex, llm: LLM, trace: Trace
+) -> list[ResolvedRule]:
     """Resolve every rule against the mounted corpora once per run."""
-    return [ResolvedRule(rule=rule, quotes=_resolve_rule(rule, index, llm)) for rule in rules]
+    return [
+        ResolvedRule(rule=rule, quotes=_resolve_rule(rule, index, llm, trace))
+        for rule in rules
+    ]
 
 
-def _resolve_rule(rule: Rule, index: CorpusIndex, llm: LLM) -> list[PolicyQuote]:
+def _resolve_rule(
+    rule: Rule, index: CorpusIndex, llm: LLM, trace: Trace
+) -> list[PolicyQuote]:
+    trace.log(
+        "input",
+        parent=None,
+        input={"rule_id": rule.id, "check": rule.check, "queries": rule.queries},
+    )
+
     hits: dict[tuple[str, str], dict] = {}
     for query in rule.queries:
-        for hit in index.search(query, num_results=TOP_K):
+        trace.log(
+            "tool_call",
+            tool="corpus_search",
+            input={"query": query, "num_results": TOP_K},
+        )
+        results = index.search(query, num_results=TOP_K)
+        trace.log(
+            "observation",
+            output={
+                "hits": [
+                    {
+                        "corpus": hit["corpus"],
+                        "docno": hit["docno"],
+                        "rank": hit["rank"],
+                        "score": hit["score"],
+                    }
+                    for hit in results
+                ]
+            },
+        )
+        for hit in results:
             key = (hit["corpus"], hit["docno"])
             if key not in hits or hit["score"] > hits[key]["score"]:
                 hits[key] = hit
@@ -49,8 +83,11 @@ def _resolve_rule(rule: Rule, index: CorpusIndex, llm: LLM) -> list[PolicyQuote]
     user = _build_user_message(rule, excerpts)
 
     try:
-        answer = llm.complete_json(SYSTEM, user, ExtractAnswer)
-    except Exception:  # noqa: BLE001
+        answer = llm.complete_json(
+            SYSTEM, user, ExtractAnswer, context=f"resolve_rule:{rule.id}"
+        )
+    except Exception as error:  # noqa: BLE001
+        trace.log("error", status="error", error=str(error))
         return []
 
     return [

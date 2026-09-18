@@ -5,6 +5,7 @@ from pydantic import BaseModel
 
 from .llm import LLM, verified
 from .models import Case, CaseDocument, CaseQuote, ResolvedRule, RuleVerdict, Verdict
+from .tracelog import Trace
 
 SYSTEM = (
     "You review university business trip applications. You receive a rule, the policy "
@@ -47,13 +48,27 @@ def load_case(case_dir: Path) -> Case:
     )
 
 
-def check_case(case: Case, rules: list[ResolvedRule], llm: LLM) -> list[RuleVerdict]:
-    return [_check_rule(case, resolved, llm) for resolved in rules]
+def check_case(
+    case: Case, rules: list[ResolvedRule], llm: LLM, trace: Trace
+) -> list[RuleVerdict]:
+    return [_check_rule(case, resolved, llm, trace) for resolved in rules]
 
 
-def _check_rule(case: Case, resolved: ResolvedRule, llm: LLM) -> RuleVerdict:
+def _check_rule(
+    case: Case, resolved: ResolvedRule, llm: LLM, trace: Trace
+) -> RuleVerdict:
     rule = resolved.rule
     policy = {f"E{i}": q for i, q in enumerate(resolved.quotes, 1)}
+    trace.log(
+        "observation",
+        output={
+            "rule_id": rule.id,
+            "policy_quotes": [
+                {"corpus": q.corpus, "doc_id": q.doc_id, "quote": q.quote}
+                for q in resolved.quotes
+            ],
+        },
+    )
     if not policy:
         return RuleVerdict(
             rule_id=rule.id, verdict="unknown", reason="No policy found in the corpus."
@@ -67,8 +82,11 @@ def _check_rule(case: Case, resolved: ResolvedRule, llm: LLM) -> RuleVerdict:
         + "\n\n".join(f"[{label}] {d.name}\n{d.text}" for label, d in documents.items())
     )
     try:
-        answer = llm.complete_json(SYSTEM, user, CheckAnswer)
+        answer = llm.complete_json(
+            SYSTEM, user, CheckAnswer, context=f"check_rule:{rule.id}"
+        )
     except Exception as error:  # noqa: BLE001
+        trace.log("error", status="error", error=str(error))
         return RuleVerdict(
             rule_id=rule.id, verdict="unknown", reason=f"LLM error: {error}"
         )
