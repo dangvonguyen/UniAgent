@@ -1,3 +1,4 @@
+import asyncio
 import subprocess
 from pathlib import Path
 
@@ -48,13 +49,14 @@ def load_case(case_dir: Path) -> Case:
     )
 
 
-def check_case(
+async def check_case(
     case: Case, rules: list[ResolvedRule], llm: LLM, trace: Trace
 ) -> list[RuleVerdict]:
-    return [_check_rule(case, resolved, llm, trace) for resolved in rules]
+    tasks = [_check_rule(case, resolved, llm, trace) for resolved in rules]
+    return list(await asyncio.gather(*tasks))
 
 
-def _check_rule(
+async def _check_rule(
     case: Case, resolved: ResolvedRule, llm: LLM, trace: Trace
 ) -> RuleVerdict:
     rule = resolved.rule
@@ -82,7 +84,7 @@ def _check_rule(
         + "\n\n".join(f"[{label}] {d.name}\n{d.text}" for label, d in documents.items())
     )
     try:
-        answer = llm.complete_json(
+        answer = await llm.complete_json(
             SYSTEM, user, CheckAnswer, context=f"check_rule:{rule.id}"
         )
     except Exception as error:  # noqa: BLE001

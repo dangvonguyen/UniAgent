@@ -4,11 +4,24 @@ import gzip
 import json
 import tempfile
 from pathlib import Path
-from typing import Any
+from typing import Any, TypedDict
 
 import pyterrier as pt
 
-LANGUAGE_CONFIG = {
+from .config import (
+    RETRIEVAL_DEFAULT_NUM_RESULTS,
+    RETRIEVAL_DOCNO_META_LENGTH,
+    RETRIEVAL_WMODEL,
+)
+
+
+class LanguageConfig(TypedDict):
+    stemmer: pt.TerrierStemmer
+    stopwords: pt.TerrierStopwords | list[str]
+    tokeniser: pt.TerrierTokeniser
+
+
+LANGUAGE_CONFIG: dict[str, LanguageConfig] = {
     "de": {
         "stemmer": pt.TerrierStemmer.german,
         "stopwords": (Path(__file__).parent.parent / "resources" / "german-stopwords.txt").read_text(encoding="utf-8").splitlines(),
@@ -20,8 +33,6 @@ LANGUAGE_CONFIG = {
         "tokeniser": pt.TerrierTokeniser.english,
     },
 }  # fmt: skip
-
-DOCNO_META_LENGTH = 100
 
 Document = dict[str, Any]
 CorpusDocuments = tuple[list[Document], str]  # (documents, language) for one corpus
@@ -44,7 +55,11 @@ class CorpusRetriever:
         self._index = self._build_index(documents)
 
     def search(
-        self, query: str, *, num_results: int = 5, wmodel: str = "BM25"
+        self,
+        query: str,
+        *,
+        num_results: int = RETRIEVAL_DEFAULT_NUM_RESULTS,
+        wmodel: str = RETRIEVAL_WMODEL,
     ) -> list[dict[str, Any]]:
         query = query.strip()
         if not query:
@@ -68,7 +83,7 @@ class CorpusRetriever:
     def _build_index(self, documents: list[Document]) -> pt.terrier.TerrierIndex:
         index = pt.terrier.TerrierIndex(str(self._index_dir))
         indexer = index.indexer(
-            meta={"docno": DOCNO_META_LENGTH},
+            meta={"docno": RETRIEVAL_DOCNO_META_LENGTH},
             **LANGUAGE_CONFIG[self._language],
         )
         indexer.index(
@@ -99,8 +114,8 @@ class CorpusIndex:
     def search(
         self,
         query: str,
-        num_results: int = 10,
-        wmodel: str = "BM25",
+        num_results: int = RETRIEVAL_DEFAULT_NUM_RESULTS,
+        wmodel: str = RETRIEVAL_WMODEL,
         corpora: list[str] | None = None,
     ) -> list[dict[str, Any]]:
         query = query.strip()

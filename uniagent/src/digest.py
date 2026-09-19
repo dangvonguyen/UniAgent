@@ -1,14 +1,14 @@
 """Resolve each rule against the corpora once per run."""
 
+import asyncio
+
 from pydantic import BaseModel
 
+from .config import DIGEST_MAX_DOC_CHARS, DIGEST_TOP_K
 from .llm import LLM, verified
 from .models import PolicyQuote, ResolvedRule, Rule
 from .retrieval import CorpusIndex
 from .tracelog import Trace
-
-TOP_K = 3
-MAX_DOC_CHARS = 3000
 
 SYSTEM = (
     "You review a university's regulations. You receive a rule to look up and numbered "
@@ -28,22 +28,28 @@ class ExtractAnswer(BaseModel):
     items: list[ExtractItem] = []
 
 
-def build_digest(
+async def build_digest(
     rules: list[Rule], index: CorpusIndex, llm: LLM, trace: Trace
 ) -> list[ResolvedRule]:
     """Resolve every rule against the mounted corpora once per run."""
+
+    async def _run_task(rule: Rule) -> list[PolicyQuote]:
+        with trace.case(f"rule:{rule.id}"):
+            return await _resolve_rule(rule, index, llm, trace)
+
+    tasks = [_run_task(rule) for rule in rules]
+    quotes = await asyncio.gather(*tasks)
     return [
-        ResolvedRule(rule=rule, quotes=_resolve_rule(rule, index, llm, trace))
-        for rule in rules
+        ResolvedRule(rule=rule, quotes=rule_quotes)
+        for rule, rule_quotes in zip(rules, quotes, strict=True)
     ]
 
 
-def _resolve_rule(
+async def _resolve_rule(
     rule: Rule, index: CorpusIndex, llm: LLM, trace: Trace
 ) -> list[PolicyQuote]:
     trace.log(
         "input",
-        parent=None,
         input={"rule_id": rule.id, "check": rule.check, "queries": rule.queries},
     )
 
@@ -52,9 +58,9 @@ def _resolve_rule(
         trace.log(
             "tool_call",
             tool="corpus_search",
-            input={"query": query, "num_results": TOP_K},
+            input={"query": query, "num_results": DIGEST_TOP_K},
         )
-        results = index.search(query, num_results=TOP_K)
+        results = index.search(query, num_results=DIGEST_TOP_K)
         trace.log(
             "observation",
             output={
@@ -73,17 +79,21 @@ def _resolve_rule(
             key = (hit["corpus"], hit["docno"])
             if key not in hits or hit["score"] > hits[key]["score"]:
                 hits[key] = hit
-    top = sorted(hits.values(), key=lambda hit: hit["score"], reverse=True)[:TOP_K]
+    top = sorted(hits.values(), key=lambda hit: hit["score"], reverse=True)[
+        :DIGEST_TOP_K
+    ]
     docs = {f"D{i}": hit for i, hit in enumerate(top, 1)}
     if not docs:
         return []
 
-    excerpts = {label: hit["text"][:MAX_DOC_CHARS] for label, hit in docs.items()}
+    excerpts = {
+        label: hit["text"][:DIGEST_MAX_DOC_CHARS] for label, hit in docs.items()
+    }
 
     user = _build_user_message(rule, excerpts)
 
     try:
-        answer = llm.complete_json(
+        answer = await llm.complete_json(
             SYSTEM, user, ExtractAnswer, context=f"resolve_rule:{rule.id}"
         )
     except Exception as error:  # noqa: BLE001

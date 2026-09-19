@@ -1,30 +1,19 @@
 #!/usr/bin/env python3
 
 import argparse
+import asyncio
 import json
-import os
 from pathlib import Path
 from typing import Any
 
 from src.check import check_case, load_case
+from src.config import DEFAULT_MAX_TOKENS, RETRIEVAL_CORPORA_DIR, Settings
 from src.digest import build_digest
 from src.llm import LLM
 from src.models import Decision, ResolvedRule, RuleVerdict
 from src.retrieval import build_index
 from src.rules import RULES
 from src.tracelog import Trace
-
-RETRIEVAL_CORPORA_DIR = "retrieval-corpora"
-
-
-def required_environment() -> tuple[str, str, str]:
-    values = []
-    for name in ("OPENAI_BASE_URL", "OPENAI_API_KEY", "OPENAI_MODEL"):
-        value = os.environ.get(name, "").strip()
-        if not value:
-            raise RuntimeError(f"Required environment variable {name} is not set.")
-        values.append(value)
-    return values[0], values[1], values[2]
 
 
 def case_dirs(input_dir: Path) -> list[Path]:
@@ -52,26 +41,26 @@ def _decision_answer(result: str, verdicts: list[RuleVerdict]) -> str:
 def _decision_evidence(verdicts: list[RuleVerdict]) -> list[dict[str, Any]]:
     evidence = []
     for v in verdicts:
-        for q in v.case_quotes:
+        for case_q in v.case_quotes:
             evidence.append(
                 {
-                    "source_id": q.document,
-                    "quote": q.quote,
+                    "source_id": case_q.document,
+                    "quote": case_q.quote,
                     "relevance": f"{v.rule_id} ({v.verdict}): {v.reason}",
                 }
             )
-        for q in v.policy_quotes:
+        for policy_q in v.policy_quotes:
             evidence.append(
                 {
-                    "source_id": f"{q.corpus}/{q.doc_id}",
-                    "quote": q.quote,
+                    "source_id": f"{policy_q.corpus}/{policy_q.doc_id}",
+                    "quote": policy_q.quote,
                     "relevance": f"{v.rule_id}: policy basis",
                 }
             )
     return evidence
 
 
-def decide_case(
+async def decide_case(
     case_dir: Path, rules: list[ResolvedRule], llm: LLM, trace: Trace
 ) -> dict[str, Any]:
     with trace.case(case_dir.name):
@@ -83,7 +72,7 @@ def decide_case(
             raise
         trace.log("input", output={"documents": [d.name for d in case.documents]})
 
-        verdicts = check_case(case, rules, llm, trace)
+        verdicts = await check_case(case, rules, llm, trace)
         failed = any(v.verdict == "fail" for v in verdicts)
         decision = Decision(
             case_id=case.case_id,
@@ -101,15 +90,15 @@ def decide_case(
     return {"antrag": case.case_id, "result": decision.result}
 
 
-def main() -> None:
+async def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--input", type=Path, required=True)
     parser.add_argument("--output", type=Path, required=True)
-    parser.add_argument("--max-tokens", type=int, default=8192)
+    parser.add_argument("--max-tokens", type=int, default=DEFAULT_MAX_TOKENS)
     args = parser.parse_args()
     args.output.mkdir(parents=True, exist_ok=True)
 
-    api_base, api_key, model = required_environment()
+    settings = Settings.from_env()
 
     input_root = args.input.resolve()
     corpora_root = input_root / RETRIEVAL_CORPORA_DIR
@@ -117,32 +106,56 @@ def main() -> None:
     predictions_path = args.output / "predictions.jsonl"
 
     with (
-        Trace(trace_path, model) as trace,
+        Trace(trace_path, settings.openai_model) as trace,
         predictions_path.open("w", encoding="utf-8") as predictions,
     ):
         # Phase 1: build the retrieval index over the mounted corpora.
         print(f"Building corpus index over {input_root}...", flush=True)
         index = build_index(corpora_root)
 
-        llm = LLM(api_base, api_key, model, args.max_tokens, trace)
+        llm = LLM(
+            settings.openai_base_url,
+            settings.openai_api_key,
+            settings.openai_model,
+            args.max_tokens,
+            trace,
+        )
 
         # Phase 2: resolve every rule's policy quotes once, shared across all cases.
+        # Each rule traces under its own case_id.
         print(f"Resolving policy digest for {len(RULES)} rules...", flush=True)
-        with trace.case("-"):
-            rules = build_digest(RULES, index, llm, trace)
-            for r in rules:
-                print(f"  - {r.rule.id}: {len(r.quotes)} policy quote(s)", flush=True)
+        rules = await build_digest(RULES, index, llm, trace)
+        for r in rules:
+            print(f"  - {r.rule.id}: {len(r.quotes)} policy quote(s)", flush=True)
 
-        # Phase 3: decide each case against the resolved rule digest.
+        # Phase 3: decide each case against the resolved rule digest, concurrently.
         cases = case_dirs(input_root)
         print(f"Deciding {len(cases)} case(s)...", flush=True)
-        for case_dir in cases:
-            prediction = decide_case(case_dir, rules, llm, trace)
-            predictions.write(json.dumps(prediction, ensure_ascii=False) + "\n")
-            print(f"  {case_dir.name}: {prediction['result']}", flush=True)
+
+        async def _decide_indexed(i: int, case_dir: Path) -> tuple[int, dict[str, Any]]:
+            return i, await decide_case(case_dir, rules, llm, trace)
+
+        tasks = [
+            asyncio.create_task(_decide_indexed(i, case_dir))
+            for i, case_dir in enumerate(cases)
+        ]
+        results: list[dict[str, Any] | None] = [None] * len(cases)
+        try:
+            for coro in asyncio.as_completed(tasks):
+                i, prediction = await coro
+                results[i] = prediction
+                print(f"  {cases[i].name}: {prediction['result']}", flush=True)
+        except BaseException:
+            for task in tasks:
+                task.cancel()
+            await asyncio.gather(*tasks, return_exceptions=True)
+            raise
+        for result in results:
+            assert result is not None
+            predictions.write(json.dumps(result, ensure_ascii=False) + "\n")
 
     print(f"Done. Predictions written to {predictions_path}", flush=True)
 
 
 if __name__ == "__main__":
-    main()
+    asyncio.run(main())

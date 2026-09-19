@@ -1,11 +1,20 @@
+import asyncio
 import json
 import re
 from typing import TypeVar
 
 import json_repair
-from openai import OpenAI
+from openai import AsyncOpenAI
+from openai.types.responses import ResponseInputParam
 from pydantic import BaseModel, ValidationError
 
+from .config import (
+    LLM_COMPLETION_ATTEMPTS,
+    LLM_MAX_CONCURRENCY,
+    LLM_MAX_RETRIES,
+    LLM_TEMPERATURE,
+    LLM_TIMEOUT_SECONDS,
+)
 from .tracelog import Trace
 
 M = TypeVar("M", bound=BaseModel)
@@ -21,17 +30,27 @@ class LLM:
     def __init__(
         self, api_base: str, api_key: str, model: str, max_tokens: int, trace: Trace
     ) -> None:
-        self._client = OpenAI(
-            api_key=api_key, base_url=api_base, max_retries=2, timeout=120
+        self._client = AsyncOpenAI(
+            api_key=api_key,
+            base_url=api_base,
+            max_retries=LLM_MAX_RETRIES,
+            timeout=LLM_TIMEOUT_SECONDS,
         )
         self._model = model
         self._max_tokens = max_tokens
         self._trace = trace
+        self._semaphore = asyncio.Semaphore(LLM_MAX_CONCURRENCY)
 
-    def complete_json(
+    async def complete_json(
         self, system: str, user: str, schema: type[M], *, context: str = ""
     ) -> M:
-        messages = [
+        async with self._semaphore:
+            return await self._complete_json(system, user, schema, context=context)
+
+    async def _complete_json(
+        self, system: str, user: str, schema: type[M], *, context: str = ""
+    ) -> M:
+        messages: ResponseInputParam = [
             {"role": "system", "content": system},
             {
                 "role": "user",
@@ -40,14 +59,14 @@ class LLM:
         ]
         last_error: str | None = None
 
-        for attempt in range(2):
+        for attempt in range(LLM_COMPLETION_ATTEMPTS):
             log_input = {"context": context, "attempt": attempt, "messages": messages}
 
             try:
-                response = self._client.responses.create(
+                response = await self._client.responses.create(
                     model=self._model,
                     input=messages,
-                    temperature=0,
+                    temperature=LLM_TEMPERATURE,
                     max_output_tokens=self._max_tokens,
                 )
             except Exception as err:  # noqa: BLE001
