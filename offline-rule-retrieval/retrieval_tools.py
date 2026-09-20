@@ -85,46 +85,232 @@ def document_text(document: dict[str, Any]) -> str:
 
     return text
 
+def _word_count(text: str) -> int:
+    return len(text.split())
+
+
+def _split_sentences(
+    text: str,
+    max_words: int,
+) -> list[str]:
+    """Split long text by sentence boundaries.
+
+    Hard word splitting is only used when a single sentence itself
+    is longer than max_words.
+    """
+
+    sentences = [
+        sentence.strip()
+        for sentence in re.split(
+            r"(?<=[.!?])\s+",
+            text.strip(),
+        )
+        if sentence.strip()
+    ]
+
+    units: list[str] = []
+
+    for sentence in sentences:
+        words = sentence.split()
+
+        if len(words) <= max_words:
+            units.append(sentence)
+            continue
+
+        # Last resort: one sentence itself is extremely long.
+        for start in range(0, len(words), max_words):
+            units.append(
+                " ".join(
+                    words[start:start + max_words]
+                )
+            )
+
+    return units
+
+
+def _structural_units(
+    text: str,
+    max_words: int,
+) -> list[str]:
+    """Split text using increasingly finer structural boundaries.
+
+    Priority:
+    1. blank line (\\n\\n)
+    2. single newline (\\n)
+    3. sentence boundary
+    4. hard word split as last resort
+    """
+
+    paragraphs = [
+        part.strip()
+        for part in re.split(
+            r"\n\s*\n+",
+            text.strip(),
+        )
+        if part.strip()
+    ]
+
+    units: list[str] = []
+
+    for paragraph in paragraphs:
+
+        if _word_count(paragraph) <= max_words:
+            units.append(paragraph)
+            continue
+
+        # Paragraph is too large: try single newlines.
+        lines = [
+            line.strip()
+            for line in paragraph.splitlines()
+            if line.strip()
+        ]
+
+        if len(lines) > 1:
+            for line in lines:
+                if _word_count(line) <= max_words:
+                    units.append(line)
+                else:
+                    units.extend(
+                        _split_sentences(
+                            line,
+                            max_words,
+                        )
+                    )
+        else:
+            # Still too large: split by sentence.
+            units.extend(
+                _split_sentences(
+                    paragraph,
+                    max_words,
+                )
+            )
+
+    return units
+
+
+def _overlap_units(
+    units: list[str],
+    max_overlap_words: int,
+) -> list[str]:
+    """Keep complete trailing structural units as overlap."""
+
+    overlap: list[str] = []
+    word_count = 0
+
+    for unit in reversed(units):
+        unit_words = _word_count(unit)
+
+        if (
+            word_count + unit_words
+            > max_overlap_words
+        ):
+            break
+
+        overlap.insert(0, unit)
+        word_count += unit_words
+
+    return overlap
+
+
 def chunk_document(
     document: dict[str, Any],
-    chunk_size: int = 500,
-    overlap: int = 100,
+    target_size: int = 800,
+    max_size: int = 1000,
+    overlap_size: int = 150,
 ) -> list[dict[str, Any]]:
-    """Split one corpus document into overlapping word chunks."""
+    """Split a document into structure-aware chunks.
 
-    if chunk_size <= 0:
-        raise ValueError("chunk_size must be greater than 0.")
+    Chunks target roughly 800 words and never intentionally exceed
+    1000 words. Boundaries are chosen from paragraphs, lines, and
+    sentences before falling back to hard word splitting.
+    """
 
-    if overlap < 0 or overlap >= chunk_size:
-        raise ValueError("overlap must satisfy 0 <= overlap < chunk_size.")
+    if target_size <= 0:
+        raise ValueError(
+            "target_size must be greater than 0."
+        )
+
+    if max_size < target_size:
+        raise ValueError(
+            "max_size must be >= target_size."
+        )
+
+    if overlap_size < 0:
+        raise ValueError(
+            "overlap_size must be >= 0."
+        )
 
     text = document_text(document)
-    words = text.split()
 
-    chunks = []
-    start = 0
+    units = _structural_units(
+        text,
+        max_words=max_size,
+    )
+
+    chunks: list[dict[str, Any]] = []
+
+    current_units: list[str] = []
+    current_words = 0
     chunk_index = 0
 
-    while start < len(words):
-        end = min(start + chunk_size, len(words))
+    def emit_chunk() -> None:
+        nonlocal chunk_index
 
-        chunk_text = " ".join(words[start:end])
+        if not current_units:
+            return
+
+        chunk_text = "\n\n".join(
+            current_units
+        ).strip()
 
         chunks.append(
             {
-                "chunk_id": f"{document['doc_id']}__{chunk_index:04d}",
-                "doc_id": str(document["doc_id"]),
+                "chunk_id": (
+                    f"{document['doc_id']}"
+                    f"__{chunk_index:04d}"
+                ),
+                "doc_id": str(
+                    document["doc_id"]
+                ),
                 "text": chunk_text,
                 "title": document.get("title"),
                 "url": document.get("url"),
             }
         )
 
-        if end == len(words):
-            break
-
-        start = end - overlap
         chunk_index += 1
+
+    for unit in units:
+        unit_words = _word_count(unit)
+
+        # Finish the current chunk before adding the next unit
+        # if the target is already reached, or adding it would
+        # exceed the hard maximum.
+        if current_units and (
+            current_words >= target_size
+            or current_words + unit_words > max_size
+        ):
+            previous_units = list(
+                current_units
+            )
+
+            emit_chunk()
+
+            current_units = _overlap_units(
+                previous_units,
+                overlap_size,
+            )
+
+            current_words = sum(
+                _word_count(item)
+                for item in current_units
+            )
+
+        current_units.append(unit)
+        current_words += unit_words
+
+    if current_units:
+        emit_chunk()
 
     return chunks
 

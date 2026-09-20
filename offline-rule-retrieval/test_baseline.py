@@ -30,23 +30,37 @@ from dedup import (
 
 class ChunkingTest(unittest.TestCase):
 
-    def test_splits_long_document_into_chunks(self):
+    @staticmethod
+    def make_paragraph(prefix: str, word_count: int) -> str:
+        return " ".join(
+            f"{prefix}{index}"
+            for index in range(word_count)
+        )
+
+    def test_splits_long_document_into_structure_aware_chunks(self):
+        paragraphs = [
+            self.make_paragraph(f"p{index}_", 100)
+            for index in range(12)
+        ]
+
         document = {
             "doc_id": "doc-001",
             "title": "Test document",
             "url": "https://example.com",
-            "content": " ".join(
-                f"word{i}" for i in range(1200)
-            ),
+            "content": "\n\n".join(paragraphs),
         }
 
         chunks = chunk_document(
             document,
-            chunk_size=500,
-            overlap=100,
+            target_size=800,
+            max_size=1000,
+            overlap_size=150,
         )
 
-        self.assertEqual(3, len(chunks))
+        self.assertGreater(
+            len(chunks),
+            1,
+        )
 
         self.assertEqual(
             "doc-001__0000",
@@ -58,34 +72,103 @@ class ChunkingTest(unittest.TestCase):
             chunks[0]["doc_id"],
         )
 
-        self.assertEqual(
-            500,
-            len(chunks[0]["text"].split()),
-        )
+        for chunk in chunks:
+            self.assertLessEqual(
+                len(chunk["text"].split()),
+                1000,
+            )
 
+    def test_preserves_structural_overlap_between_chunks(self):
+        paragraphs = [
+            self.make_paragraph(f"p{index}_", 100)
+            for index in range(10)
+        ]
 
-    def test_preserves_overlap_between_chunks(self):
         document = {
             "doc_id": "doc-002",
-            "content": " ".join(
-                f"word{i}" for i in range(1000)
+            "content": "\n\n".join(paragraphs),
+        }
+
+        chunks = chunk_document(
+            document,
+            target_size=800,
+            max_size=1000,
+            overlap_size=150,
+        )
+
+        self.assertGreaterEqual(
+            len(chunks),
+            2,
+        )
+
+        # Paragraph cuối của chunk 1 được giữ nguyên
+        # ở đầu chunk 2 thay vì overlap bằng 100 từ bị cắt ngang.
+        self.assertTrue(
+            chunks[0]["text"].endswith(
+                paragraphs[7]
+            )
+        )
+
+        self.assertTrue(
+            chunks[1]["text"].startswith(
+                paragraphs[7]
+            )
+        )
+
+    def test_prefers_sentence_boundaries_for_long_paragraphs(self):
+        sentence_1 = (
+            " ".join(
+                f"a{index}"
+                for index in range(400)
+            )
+            + "."
+        )
+
+        sentence_2 = (
+            " ".join(
+                f"b{index}"
+                for index in range(400)
+            )
+            + "."
+        )
+
+        sentence_3 = (
+            " ".join(
+                f"c{index}"
+                for index in range(400)
+            )
+            + "."
+        )
+
+        document = {
+            "doc_id": "doc-003",
+            "content": (
+                f"{sentence_1} "
+                f"{sentence_2} "
+                f"{sentence_3}"
             ),
         }
 
         chunks = chunk_document(
             document,
-            chunk_size=500,
-            overlap=100,
+            target_size=800,
+            max_size=1000,
+            overlap_size=150,
         )
-
-        first = chunks[0]["text"].split()
-        second = chunks[1]["text"].split()
 
         self.assertEqual(
-            first[-100:],
-            second[:100],
+            2,
+            len(chunks),
         )
 
+        self.assertTrue(
+            chunks[0]["text"].endswith(".")
+        )
+
+        self.assertTrue(
+            chunks[1]["text"].startswith("c0")
+        )
+        
 class DeduplicationTest(unittest.TestCase):
 
     def test_normalizes_case_and_whitespace(self):
