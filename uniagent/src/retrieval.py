@@ -3,6 +3,7 @@ from __future__ import annotations
 import gzip
 import json
 import tempfile
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, TypedDict
 
@@ -13,6 +14,7 @@ from .config import (
     RETRIEVAL_DOCNO_META_LENGTH,
     RETRIEVAL_WMODEL,
 )
+from .passages import Passage, split_into_passages
 
 
 class LanguageConfig(TypedDict):
@@ -38,6 +40,16 @@ Document = dict[str, Any]
 CorpusDocuments = tuple[list[Document], str]  # (documents, language) for one corpus
 
 
+@dataclass(frozen=True)
+class SearchHit:
+    passage: Passage
+    score: float
+
+    @property
+    def excerpt(self) -> str:
+        return f"{self.passage.title}\n\n{self.passage.text}"
+
+
 class CorpusRetriever:
     def __init__(
         self, corpus_name: str, documents: list[Document], language: str
@@ -50,9 +62,16 @@ class CorpusRetriever:
         self._corpus_name = corpus_name
         self._language = language
 
+        self._passages = {
+            passage.passage_id: passage
+            for doc in documents
+            for passage in split_into_passages(
+                corpus_name, doc["doc_id"], doc["title"], doc["content"], language
+            )
+        }
+
         self._index_dir = Path(tempfile.mkdtemp(prefix=f"index-{corpus_name}_"))
-        self._texts = {str(doc["doc_id"]): doc.get("text") or "" for doc in documents}
-        self._index = self._build_index(documents)
+        self._index = self._build_index()
 
     def search(
         self,
@@ -60,7 +79,7 @@ class CorpusRetriever:
         *,
         num_results: int = RETRIEVAL_DEFAULT_NUM_RESULTS,
         wmodel: str = RETRIEVAL_WMODEL,
-    ) -> list[dict[str, Any]]:
+    ) -> list[SearchHit]:
         query = query.strip()
         if not query:
             raise ValueError("Query must not be empty.")
@@ -70,25 +89,19 @@ class CorpusRetriever:
         retriever = self._index.retriever(wmodel, num_results=num_results)
         results = retriever.search(query)
         return [
-            {
-                "docno": row.docno,
-                "rank": int(row.rank),
-                "score": float(row.score),
-                "corpus": self._corpus_name,
-                "text": self._texts.get(row.docno, ""),
-            }
+            SearchHit(passage=self._passages[row.docno], score=float(row.score))
             for row in results.itertuples()
         ]
 
-    def _build_index(self, documents: list[Document]) -> pt.terrier.TerrierIndex:
+    def _build_index(self) -> pt.terrier.TerrierIndex:
         index = pt.terrier.TerrierIndex(str(self._index_dir))
         indexer = index.indexer(
             meta={"docno": RETRIEVAL_DOCNO_META_LENGTH},
             **LANGUAGE_CONFIG[self._language],
         )
         indexer.index(
-            {"docno": str(doc["doc_id"]), "text": doc.get("text") or ""}
-            for doc in documents
+            {"docno": passage.passage_id, "text": f"{passage.title}\n{passage.text}"}
+            for passage in self._passages.values()
         )
         return index
 
@@ -117,7 +130,7 @@ class CorpusIndex:
         num_results: int = RETRIEVAL_DEFAULT_NUM_RESULTS,
         wmodel: str = RETRIEVAL_WMODEL,
         corpora: list[str] | None = None,
-    ) -> list[dict[str, Any]]:
+    ) -> list[SearchHit]:
         query = query.strip()
         if not query:
             raise ValueError("Query must not be empty.")
@@ -131,7 +144,7 @@ class CorpusIndex:
             if retriever is None:
                 continue
             hits.extend(retriever.search(query, num_results=num_results, wmodel=wmodel))
-        hits.sort(key=lambda hit: hit["score"], reverse=True)
+        hits.sort(key=lambda hit: hit.score, reverse=True)
         # TODO: score are different between corpus
         return hits[:num_results]
 
