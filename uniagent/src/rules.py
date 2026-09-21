@@ -3,140 +3,188 @@ from .models import Rule
 
 RULES: list[Rule] = [
     Rule(
-        id="advance_approval",
+        id="application_approval_timing",
         check=(
             "Determine the relationship between the timing of a business-trip "
-            "application or approval and the start of the trip."
+            "application or approval and the timing of the trip."
         ),
         queries=[
-            "Dienstreiseantrag Genehmigung Zeitpunkt Reisebeginn",
-            "Dienstreise Antragstellung Genehmigung Frist",
-            "Dienstreisegenehmigung Reiseantritt",
+            (
+                "Dienstreise Dienstreiseantrag Antragstellung Genehmigung "
+                "Zeitpunkt Frist Reisebeginn Reiseantritt"
+            ),
+            (
+                "business trip application approval timing deadline "
+                "trip start travel commencement"
+            ),
         ],
     ),
 
     Rule(
-        id="six_month_deadline",
+        id="reimbursement_claim_timing",
         check=(
-            "Determine the applicable time limits for claiming, submitting, "
-            "or settling business-trip expenses after a trip."
+            "Determine the timing rules that apply to claiming, submitting, "
+            "or settling business-trip expenses."
         ),
         queries=[
-            "Reisekostenabrechnung Frist",
-            "Reisekostenvergütung Antrag Frist",
-            "Reisekostenerstattung Ausschlussfrist",
-            "Dienstreise Abrechnung Frist",
+            (
+                "Dienstreise Reisekosten Reisekostenabrechnung "
+                "Reisekostenvergütung Erstattung Antrag Abrechnung "
+                "Frist Ausschlussfrist"
+            ),
+            (
+                "business trip travel expenses reimbursement claim "
+                "submission settlement application deadline time limit"
+            ),
         ],
     ),
 
     Rule(
-        id="domestic_hotel_limit",
+        id="domestic_accommodation_reimbursement",
         check=(
             "Determine how accommodation costs for domestic business trips "
-            "are reimbursed, including any applicable limits or justification conditions."
+            "are reimbursed, including whether any limits or justification "
+            "conditions apply."
         ),
         queries=[
-            "Übernachtungskosten Dienstreise Inland Erstattung",
-            "Hotelkosten Dienstreise Höchstbetrag",
-            "Übernachtungskosten Reisekosten Höchstgrenze",
-            "notwendige Übernachtungskosten Dienstreise",
+            (
+                "Dienstreise Inland Reisekosten Übernachtung "
+                "Übernachtungskosten Hotelkosten Erstattung "
+                "Höchstbetrag Höchstgrenze Nachweis Begründung"
+            ),
+            (
+                "domestic business trip accommodation hotel overnight "
+                "cost reimbursement limit maximum justification evidence"
+            ),
         ],
     ),
 
     Rule(
-        id="foreign_hotel",
+        id="foreign_accommodation_reimbursement",
         check=(
-            "Determine how accommodation costs are handled for business trips abroad."
+            "Determine how accommodation costs for business trips abroad "
+            "are reimbursed and what conditions apply."
         ),
         queries=[
-            "Auslandsdienstreise Übernachtungskosten",
-            "Ausland Reisekosten Übernachtung Erstattung",
-            "Hotelkosten Auslandsdienstreise",
-            "Auslandsreisekosten Übernachtung",
+            (
+                "Auslandsdienstreise Ausland Reisekosten Übernachtung "
+                "Übernachtungskosten Hotelkosten Erstattung "
+                "Auslandsreisekosten"
+            ),
+            (
+                "foreign business trip abroad accommodation hotel "
+                "overnight expenses travel cost reimbursement"
+            ),
         ],
     ),
 
     Rule(
-        id="private_extension",
+        id="business_private_trip_combination",
         check=(
-            "Determine how combining a business trip with private travel or "
-            "a private stay affects reimbursable travel costs."
+            "Determine how combining a business trip with private travel "
+            "or a private stay affects travel-expense reimbursement."
         ),
         queries=[
-            "Dienstreise Privatreise Reisekosten",
-            "Dienstreise private Verlängerung Erstattung",
-            "Dienstreise Privataufenthalt Kosten",
-            "Verbindung Dienstreise private Reise",
+            (
+                "Dienstreise Privatreise Privataufenthalt private Verlängerung "
+                "Verbindung Reisekosten Fahrtkosten Erstattung"
+            ),
+            (
+                "business trip private travel private stay extension "
+                "combined journey travel expenses reimbursement"
+            ),
         ],
     ),
 
     Rule(
-        id="a1_certificate",
+        id="a1_certificate_requirements",
         check=(
-            "Determine the requirements and timing related to an A1 certificate "
-            "for business travel or work abroad."
+            "Determine what rules, if any, apply to an A1 certificate for "
+            "business travel or work abroad, including relevant timing."
         ),
         queries=[
-            "A1-Bescheinigung Auslandsdienstreise",
-            "A1 Dienstreise Ausland Antrag",
-            "Entsendebescheinigung Dienstreise Ausland",
-            "A1-Bescheinigung Frist Vorlauf",
+            (
+                "A1 Bescheinigung A1-Bescheinigung Auslandsdienstreise "
+                "Entsendung Ausland Antrag Frist Vorlauf Sozialversicherung"
+            ),
+            (
+                "A1 certificate foreign business trip posting abroad "
+                "application timing deadline social security"
+            ),
         ],
     ),
 
     Rule(
-        id="flight_train_comparison",
+        id="transport_mode_selection",
         check=(
-            "Determine how the choice between air, rail, or other transport "
-            "modes is assessed for business travel, including economic considerations."
+            "Determine how the choice of transport mode for a business trip "
+            "is assessed, including relevant cost or economic considerations."
         ),
         queries=[
-            "Dienstreise Flug Bahn Wirtschaftlichkeit",
-            "Reisekosten Wahl Beförderungsmittel",
-            "Flugkosten Bahnkosten Dienstreise",
-            "wirtschaftliches Beförderungsmittel Dienstreise",
+            (
+                "Dienstreise Reisekosten Beförderungsmittel Verkehrsmittel "
+                "Flug Bahn Zug Flugkosten Fahrtkosten Wirtschaftlichkeit "
+                "wirtschaftlich notwendig"
+            ),
+            (
+                "business trip travel transport mode flight train rail "
+                "travel costs economic economical necessity reimbursement"
+            ),
         ],
     ),
 
     Rule(
-        id="invoice_addressee",
+        id="invoice_billing_requirements",
         check=(
-            "Determine what requirements apply to the addressee or billing "
-            "information on invoices for business-trip expenses."
+            "Determine what rules apply to invoice addressee and billing "
+            "information for expenses connected with business trips."
         ),
         queries=[
-            "Dienstreise Rechnungsempfänger Universität",
-            "Reisekosten Rechnungsadresse",
-            "Dienstreise Rechnung Universität Kassel",
-            "Reisekostenabrechnung Rechnungsempfänger",
+            (
+                "Dienstreise Reisekosten Rechnung Rechnungsempfänger "
+                "Rechnungsadresse Universität Kassel Abrechnung Beleg"
+            ),
+            (
+                "business trip travel expenses invoice addressee "
+                "billing address university reimbursement receipt"
+            ),
         ],
     ),
 
     Rule(
-        id="evening_program",
+        id="event_side_program_costs",
         check=(
-            "Determine how costs for supporting programmes, side programmes, "
+            "Determine how costs for side programmes, accompanying programmes, "
             "or evening activities connected with an event are treated."
         ),
         queries=[
-            "Rahmenprogramme Aufwendungen Finanzierung Teilnahmegebühren",
-            "Rahmenprogramm Kosten Erstattung Veranstaltung",
-            "Rahmenprogramm Bewirtungskosten Finanzierung",
-            "Begleitprogramm Abendprogramm Aufwendungen Kosten",
+            (
+                "Rahmenprogramm Rahmenprogramme Begleitprogramm Abendprogramm "
+                "Veranstaltung Aufwendungen Kosten Bewirtungskosten "
+                "Teilnahmegebühren Finanzierung Erstattung"
+            ),
+            (
+                "event side programme accompanying programme evening programme "
+                "expenses costs participation fees financing reimbursement"
+            ),
         ],
     ),
 
     Rule(
-        id="double_funding",
+        id="third_party_reimbursement",
         check=(
-            "Determine how business-trip expenses are treated when the same "
-            "trip or expense may be financed or reimbursed from another source."
+            "Determine how business-trip expenses are treated when costs "
+            "may also be financed, paid, or reimbursed by another source."
         ),
         queries=[
-            "Reisekosten Doppelfinanzierung",
-            "Reisekosten Drittmittel Erstattung",
-            "Dienstreise andere Erstattung Anrechnung",
-            "Reisekosten Finanzierung durch Dritte",
+            (
+                "Dienstreise Reisekosten Drittmittel Dritte dritte Seite "
+                "Erstattung Finanzierung Zahlung Anrechnung Kostenübernahme"
+            ),
+            (
+                "business trip travel expenses third party funding "
+                "reimbursement payment financing cost coverage credit"
+            ),
         ],
     ),
 ]
