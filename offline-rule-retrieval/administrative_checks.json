@@ -1,0 +1,362 @@
+[
+  {
+    "check_id": "advance_approval",
+    "description_vi": "Đơn công tác phải được nộp hoặc phê duyệt trước khi chuyến đi bắt đầu",
+    "semantic_query": "Regel zur Beantragung und Genehmigung einer Dienstreise vor Reisebeginn",
+    "queries": [
+      "Dienstreiseantrag vor Reisebeginn Genehmigung",
+      "Dienstreise vor Reiseantritt beantragen genehmigen"
+    ],
+    "keywords": [
+      "Dienstreise",
+      "Dienstreiseantrag",
+      "vor Reisebeginn",
+      "vor Reiseantritt",
+      "Reiseantritt",
+      "Genehmigung",
+      "genehmigt",
+      "Antragstellung"
+    ],
+    "required_keyword_groups": [
+      [
+        "Dienstreise",
+        "Dienstreiseantrag"
+      ],
+      [
+        "vor Reisebeginn",
+        "vor Reiseantritt",
+        "Reiseantritt"
+      ],
+      [
+        "Genehmigung",
+        "genehmigt",
+        "Antragstellung",
+        "Dienstreiseantrag"
+      ]
+    ]
+  },
+  {
+    "check_id": "six_month_deadline",
+    "description_vi": "Yêu cầu hoàn trả công tác phí phải tuân thủ thời hạn 6 tháng",
+    "semantic_query": "Ausschlussfrist von sechs Monaten für die Beantragung oder Abrechnung von Reisekosten",
+    "queries": [
+      "Reisekostenabrechnung Ausschlussfrist sechs Monate",
+      "Reisekostenerstattung innerhalb sechs Monaten Frist"
+    ],
+    "keywords": [
+      "Reisekosten",
+      "Reisekostenabrechnung",
+      "Reisekostenerstattung",
+      "Ausschlussfrist",
+      "sechs Monate",
+      "6 Monate",
+      "Frist"
+    ],
+    "required_keyword_groups": [
+      [
+        "Reisekosten",
+        "Reisekostenabrechnung",
+        "Reisekostenerstattung"
+      ],
+      [
+        "sechs Monate",
+        "6 Monate"
+      ],
+      [
+        "Ausschlussfrist",
+        "Frist",
+        "innerhalb"
+      ]
+    ]
+  },
+  {
+    "check_id": "domestic_hotel_limit",
+    "description_vi": "Chi phí lưu trú nội địa đến 80 EUR được xem là không thể tránh khỏi; cao hơn cần có lý do",
+    "semantic_query": "Regel zu Übernachtungskosten bei Dienstreisen mit einer Grenze von 80 Euro",
+    "queries": [
+      "Übernachtungskosten Inland 80 Euro Dienstreise",
+      "Übernachtung Dienstreise 80 EUR Erstattung"
+    ],
+    "keywords": [
+      "Übernachtung",
+      "Übernachtungskosten",
+      "80 Euro",
+      "80 EUR",
+      "80 €",
+      "Inland",
+      "Dienstreise"
+    ],
+    "required_keyword_groups": [
+      [
+        "Übernachtung",
+        "Übernachtungskosten"
+      ],
+      [
+        "80 Euro",
+        "80 EUR",
+        "80 €"
+      ]
+    ]
+  },
+  {
+    "check_id": "foreign_hotel",
+    "description_vi": "Quy định về chi phí lưu trú khi thực hiện chuyến công tác nước ngoài",
+    "semantic_query": "Regel zu Übernachtungskosten und Übernachtungsgeld bei Auslandsdienstreisen",
+    "queries": [
+      "Auslandsdienstreise Übernachtungskosten Ausland",
+      "Auslandsübernachtungsgeld Reisekosten Dienstreise"
+    ],
+    "keywords": [
+      "Auslandsdienstreise",
+      "Ausland",
+      "Übernachtung",
+      "Übernachtungskosten",
+      "Auslandsübernachtungsgeld",
+      "Reisekosten"
+    ],
+    "required_keyword_groups": [
+      [
+        "Auslandsdienstreise",
+        "Ausland"
+      ],
+      [
+        "Übernachtung",
+        "Übernachtungskosten",
+        "Auslandsübernachtungsgeld"
+      ]
+    ]
+  },
+  {
+    "check_id": "private_extension",
+    "description_vi": "Quy định khi kết hợp chuyến công tác với chuyến đi cá nhân, đặc biệt mốc 5 ngày làm việc",
+    "semantic_query": "Verbindung einer Dienstreise mit einer privaten Reise von mehr als fünf Arbeitstagen",
+    "queries": [
+      "Dienstreise private Reise fünf Arbeitstage Reisekosten",
+      "Privataufenthalt Dienstreise 5 Arbeitstage",
+      "Dienstreise privaten Reisen mehr als fünf Arbeitstage"
+    ],
+    "keywords": [
+      "Dienstreise",
+      "private Reise",
+      "privaten Reisen",
+      "Privataufenthalt",
+      "private Verlängerung",
+      "fünf Arbeitstage",
+      "5 Arbeitstage",
+      "mehr als fünf Arbeitstage"
+    ],
+    "required_keyword_groups": [
+      [
+        "Dienstreise",
+        "Dienstreisen"
+      ],
+      [
+        "private Reise",
+        "privaten Reisen",
+        "Privataufenthalt",
+        "private Verlängerung"
+      ],
+      [
+        "fünf Arbeitstage",
+        "5 Arbeitstage",
+        "mehr als fünf Arbeitstage"
+      ]
+    ]
+  },
+  {
+    "check_id": "a1_certificate",
+    "description_vi": "Giấy chứng nhận A1 cho chuyến công tác nước ngoài và thời gian chuẩn bị khoảng 8 tuần",
+    "semantic_query": "A1-Bescheinigung für eine Auslandsdienstreise spätestens acht Wochen vor Reisebeginn",
+    "queries": [
+      "A1-Bescheinigung Auslandsdienstreise acht Wochen",
+      "A1 Bescheinigung Dienstreise Ausland 8 Wochen"
+    ],
+    "keywords": [
+      "A1-Bescheinigung",
+      "A1 Bescheinigung",
+      "acht Wochen",
+      "8 Wochen",
+      "Auslandsdienstreise",
+      "Ausland",
+      "Dienstreise"
+    ],
+    "required_keyword_groups": [
+      [
+        "A1-Bescheinigung",
+        "A1 Bescheinigung"
+      ],
+      [
+        "acht Wochen",
+        "8 Wochen"
+      ],
+      [
+        "Auslandsdienstreise",
+        "Ausland",
+        "Dienstreise"
+      ]
+    ]
+  },
+  {
+    "check_id": "flight_train_comparison",
+    "description_vi": "Quy định về chi phí và tính kinh tế khi lựa chọn máy bay hoặc tàu",
+    "semantic_query": "Wirtschaftliche Wahl zwischen Bahn und Flug bei Dienstreisen sowie Erstattung von Fahrt- und Flugkosten",
+    "queries": [
+      "Dienstreise Flug Bahn Wirtschaftlichkeit Reisekosten",
+      "Flugkosten Bahnkosten Vergleich Dienstreise",
+      "Fahrtkosten Flugkosten Dienstreise Erstattung"
+    ],
+    "keywords": [
+      "Flug",
+      "Flugkosten",
+      "Flugkostenerstattung",
+      "Bahn",
+      "Zug",
+      "Fahrtkosten",
+      "Wirtschaftlichkeit",
+      "wirtschaftlich",
+      "Mehrkosten",
+      "Erstattung"
+    ],
+    "required_keyword_groups": [
+      [
+        "Flug",
+        "Flugkosten",
+        "Flugkostenerstattung"
+      ],
+      [
+        "Bahn",
+        "Zug",
+        "Fahrtkosten"
+      ],
+      [
+        "Wirtschaftlichkeit",
+        "wirtschaftlich",
+        "Mehrkosten",
+        "Erstattung",
+        "erstattet"
+      ]
+    ]
+  },
+  {
+    "check_id": "invoice_addressee",
+    "description_vi": "Hóa đơn liên quan chuyến công tác phải có thông tin người hoặc đơn vị nhận phù hợp, đặc biệt Universität Kassel",
+    "semantic_query": "Rechnungsadresse und Rechnungsempfänger Universität Kassel bei Dienstreise- und Reisekostenrechnungen",
+    "queries": [
+      "Dienstreise Rechnung Rechnungsempfänger Universität Kassel",
+      "Rechnungsadresse Universität Kassel Reisekosten",
+      "Rechnung Universität Kassel Dienstreise"
+    ],
+    "keywords": [
+      "Rechnung",
+      "Rechnungsadresse",
+      "Rechnungsempfänger",
+      "Universität Kassel",
+      "University of Kassel",
+      "Dienstreise",
+      "Reisekosten"
+    ],
+    "required_keyword_groups": [
+        [
+            "Rechnung",
+            "Rechnungsadresse",
+            "Rechnungsempfänger"
+        ],
+        [
+            "Universität Kassel",
+            "University of Kassel"
+        ],
+        [
+            "Dienstreise",
+            "Reisekosten",
+            "Reisekostenabrechnung"
+        ]
+    ]
+  },
+    {
+  "check_id": "evening_program",
+  "description_vi": "Chi phí cho chương trình buổi tối hoặc chương trình phụ có thể không được hoàn trả",
+  "semantic_query": "Nicht erstattungsfähige Aufwendungen für Rahmenprogramme oder Abendprogramme bei Veranstaltungen",
+  "queries": [
+    "Rahmenprogramme nicht erstattungsfähige Aufwendungen",
+    "Rahmenprogramm Erstattung Teilnahmegebühren",
+    "Abendprogramm nicht erstattungsfähige Aufwendungen",
+    "Rahmenprogramm Reisekosten Erstattung"
+  ],
+  "keywords": [
+    "Abendprogramm",
+    "Abendprogramme",
+    "Abendveranstaltung",
+    "Abendveranstaltungen",
+    "Rahmenprogramm",
+    "Rahmenprogramme",
+    "nicht erstattungsfähig",
+    "nicht erstattungsfähige",
+    "nicht erstattet",
+    "keine Erstattung",
+    "Erstattung",
+    "Reisekosten",
+    "Teilnahmegebühr",
+    "Teilnahmegebühren"
+  ],
+  "required_keyword_groups": [
+    [
+      "Abendprogramm",
+      "Abendprogramme",
+      "Abendveranstaltung",
+      "Abendveranstaltungen",
+      "Rahmenprogramm",
+      "Rahmenprogramme"
+    ],
+    [
+      "nicht erstattungsfähig",
+      "nicht erstattungsfähige",
+      "nicht erstattet",
+      "keine Erstattung"
+    ]
+  ]
+},
+  {
+  "check_id": "double_funding",
+  "description_vi": "Không được tài trợ hoặc hoàn trả hai lần cho cùng một khoản chi phí công tác",
+  "semantic_query": "Vermeidung einer doppelten Finanzierung oder doppelten Erstattung derselben Reisekosten durch Reisestipendium oder andere Finanzierung",
+  "queries": [
+    "Doppelfinanzierung Reisekosten",
+    "Doppelfinanzierung Reisestipendium",
+    "Reisekosten doppelte Erstattung",
+    "Reisekosten von dritter Seite erstattet",
+    "Reisestipendium Reisekosten Erstattung"
+  ],
+  "keywords": [
+    "Doppelfinanzierung",
+    "doppelte Finanzierung",
+    "doppelte Erstattung",
+    "Reisekosten",
+    "Reisekostenabrechnung",
+    "Reisestipendium",
+    "Dienstreise",
+    "Kostenposition",
+    "Kostenpositionen",
+    "dieselben Kosten",
+    "gleiche Kosten",
+    "von dritter Seite",
+    "anderweitig erstattet",
+    "anderweitig finanziert"
+  ],
+  "required_keyword_groups": [
+    [
+      "Doppelfinanzierung",
+      "doppelte Finanzierung",
+      "doppelte Erstattung",
+      "von dritter Seite",
+      "anderweitig erstattet",
+      "anderweitig finanziert"
+    ],
+    [
+      "Reisekosten",
+      "Reisekostenabrechnung",
+      "Reisestipendium",
+      "Dienstreise"
+    ]
+  ]
+}
+]

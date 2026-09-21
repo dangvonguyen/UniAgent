@@ -1,0 +1,2 @@
+smolagents[openai]==1.26.0
+sentence-transformers==6.1.0
