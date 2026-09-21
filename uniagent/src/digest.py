@@ -7,7 +7,7 @@ from pydantic import BaseModel
 from .config import DIGEST_MAX_DOC_CHARS, DIGEST_TOP_K
 from .llm import LLM, verified
 from .models import PolicyQuote, ResolvedRule, Rule
-from .retrieval import CorpusIndex
+from .retrieval import CorpusIndex, SearchHit
 from .tracelog import Trace
 
 SYSTEM = (
@@ -53,7 +53,7 @@ async def _resolve_rule(
         input={"rule_id": rule.id, "check": rule.check, "queries": rule.queries},
     )
 
-    hits: dict[tuple[str, str], dict] = {}
+    hits: dict[tuple[str, str], SearchHit] = {}
     for query in rule.queries:
         trace.log(
             "tool_call",
@@ -66,28 +66,25 @@ async def _resolve_rule(
             output={
                 "hits": [
                     {
-                        "corpus": hit["corpus"],
-                        "docno": hit["docno"],
-                        "rank": hit["rank"],
-                        "score": hit["score"],
+                        "corpus": hit.passage.corpus,
+                        "passage_id": hit.passage.passage_id,
+                        "score": hit.score,
                     }
                     for hit in results
                 ]
             },
         )
         for hit in results:
-            key = (hit["corpus"], hit["docno"])
-            if key not in hits or hit["score"] > hits[key]["score"]:
+            key = (hit.passage.corpus, hit.passage.passage_id)
+            if key not in hits or hit.score > hits[key].score:
                 hits[key] = hit
-    top = sorted(hits.values(), key=lambda hit: hit["score"], reverse=True)[
-        :DIGEST_TOP_K
-    ]
+    top = sorted(hits.values(), key=lambda hit: hit.score, reverse=True)[:DIGEST_TOP_K]
     docs = {f"D{i}": hit for i, hit in enumerate(top, 1)}
     if not docs:
         return []
 
     excerpts = {
-        label: hit["text"][:DIGEST_MAX_DOC_CHARS] for label, hit in docs.items()
+        label: hit.excerpt[:DIGEST_MAX_DOC_CHARS] for label, hit in docs.items()
     }
 
     user = _build_user_message(rule, excerpts)
@@ -102,8 +99,8 @@ async def _resolve_rule(
 
     return [
         PolicyQuote(
-            corpus=docs[item.doc]["corpus"],
-            doc_id=docs[item.doc]["docno"],
+            corpus=docs[item.doc].passage.corpus,
+            doc_id=docs[item.doc].passage.doc_id,
             quote=item.quote,
         )
         for item in answer.items

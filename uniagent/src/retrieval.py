@@ -5,6 +5,7 @@ import hashlib
 import json
 import re
 import tempfile
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, TypedDict
 
@@ -15,6 +16,7 @@ from .config import (
     RETRIEVAL_DOCNO_META_LENGTH,
     RETRIEVAL_WMODEL,
 )
+from .passages import Passage, split_into_passages
 
 
 class LanguageConfig(TypedDict):
@@ -38,38 +40,32 @@ LANGUAGE_CONFIG: dict[str, LanguageConfig] = {
 
 
 Document = dict[str, Any]
-CorpusDocuments = tuple[list[Document], str]  # (documents, language) for one corpus
+CorpusDocuments = tuple[list[Document], str]
 
 
 def normalize_text(text: str) -> str:
-    """Normalize text only for exact-duplicate detection."""
+    """Normalize text for exact-duplicate detection."""
     text = text.casefold()
     text = re.sub(r"\s+", " ", text)
     return text.strip()
 
 
 def deduplicate_documents(documents: list[Document]) -> list[Document]:
-    """
-    Remove exact-content duplicate documents before indexing.
-
-    Normalization is used only to calculate the duplicate fingerprint.
-    The original document text is preserved for indexing and quote extraction.
-    """
+    """Remove exact-content duplicate documents before passage creation and indexing."""
     seen: set[str] = set()
     unique: list[Document] = []
 
     for document in documents:
-        text = document.get("text") or ""
+        # Current corpus schema on main uses "content".
+        text = document.get("content") or ""
 
-        # Keep empty documents instead of treating all empty texts as duplicates.
+        # Do not collapse all empty documents into one duplicate.
         if not isinstance(text, str) or not text.strip():
             unique.append(document)
             continue
 
         normalized = normalize_text(text)
-        fingerprint = hashlib.sha256(
-            normalized.encode("utf-8")
-        ).hexdigest()
+        fingerprint = hashlib.sha256(normalized.encode("utf-8")).hexdigest()
 
         if fingerprint in seen:
             continue
@@ -78,6 +74,16 @@ def deduplicate_documents(documents: list[Document]) -> list[Document]:
         unique.append(document)
 
     return unique
+
+
+@dataclass(frozen=True)
+class SearchHit:
+    passage: Passage
+    score: float
+
+    @property
+    def excerpt(self) -> str:
+        return f"{self.passage.title}\n\n{self.passage.text}"
 
 
 class CorpusRetriever:
@@ -92,22 +98,27 @@ class CorpusRetriever:
         if not documents:
             raise ValueError(f"Corpus {corpus_name!r} contains no documents.")
 
-        # Deduplicate before building the retrieval index.
+        # Normalize for duplicate detection and remove duplicates
+        # before passage splitting and retrieval indexing.
         documents = deduplicate_documents(documents)
 
         self._corpus_name = corpus_name
         self._language = language
 
-        self._index_dir = Path(
-            tempfile.mkdtemp(prefix=f"index-{corpus_name}_")
-        )
-
-        self._texts = {
-            str(doc["doc_id"]): doc.get("text") or ""
+        self._passages = {
+            passage.passage_id: passage
             for doc in documents
+            for passage in split_into_passages(
+                corpus_name,
+                doc["doc_id"],
+                doc["title"],
+                doc["content"],
+                language,
+            )
         }
 
-        self._index = self._build_index(documents)
+        self._index_dir = Path(tempfile.mkdtemp(prefix=f"index-{corpus_name}_"))
+        self._index = self._build_index()
 
     def search(
         self,
@@ -115,42 +126,31 @@ class CorpusRetriever:
         *,
         num_results: int = RETRIEVAL_DEFAULT_NUM_RESULTS,
         wmodel: str = RETRIEVAL_WMODEL,
-    ) -> list[dict[str, Any]]:
+    ) -> list[SearchHit]:
         query = query.strip()
 
         if not query:
             raise ValueError("Query must not be empty.")
 
         if not 1 <= num_results <= 1000:
-            raise ValueError(
-                "num_results must be between 1 and 1000."
-            )
+            raise ValueError("num_results must be between 1 and 1000.")
 
         retriever = self._index.retriever(
             wmodel,
             num_results=num_results,
         )
-
         results = retriever.search(query)
 
         return [
-            {
-                "docno": row.docno,
-                "rank": int(row.rank),
-                "score": float(row.score),
-                "corpus": self._corpus_name,
-                "text": self._texts.get(row.docno, ""),
-            }
+            SearchHit(
+                passage=self._passages[row.docno],
+                score=float(row.score),
+            )
             for row in results.itertuples()
         ]
 
-    def _build_index(
-        self,
-        documents: list[Document],
-    ) -> pt.terrier.TerrierIndex:
-        index = pt.terrier.TerrierIndex(
-            str(self._index_dir)
-        )
+    def _build_index(self) -> pt.terrier.TerrierIndex:
+        index = pt.terrier.TerrierIndex(str(self._index_dir))
 
         indexer = index.indexer(
             meta={"docno": RETRIEVAL_DOCNO_META_LENGTH},
@@ -159,10 +159,10 @@ class CorpusRetriever:
 
         indexer.index(
             {
-                "docno": str(doc["doc_id"]),
-                "text": doc.get("text") or "",
+                "docno": passage.passage_id,
+                "text": f"{passage.title}\n{passage.text}",
             }
-            for doc in documents
+            for passage in self._passages.values()
         )
 
         return index
@@ -187,10 +187,7 @@ class CorpusIndex:
                     documents,
                     language,
                 )
-                for corpus_name, (
-                    documents,
-                    language,
-                ) in corpus_documents.items()
+                for corpus_name, (documents, language) in corpus_documents.items()
                 if documents
             }
         )
@@ -205,19 +202,17 @@ class CorpusIndex:
         num_results: int = RETRIEVAL_DEFAULT_NUM_RESULTS,
         wmodel: str = RETRIEVAL_WMODEL,
         corpora: list[str] | None = None,
-    ) -> list[dict[str, Any]]:
+    ) -> list[SearchHit]:
         query = query.strip()
 
         if not query:
             raise ValueError("Query must not be empty.")
 
         if not 1 <= num_results <= 1000:
-            raise ValueError(
-                "num_results must be between 1 and 1000."
-            )
+            raise ValueError("num_results must be between 1 and 1000.")
 
         targets = corpora if corpora else self.corpora
-        hits: list[dict[str, Any]] = []
+        hits: list[SearchHit] = []
 
         for corpus_name in targets:
             retriever = self._retrievers.get(corpus_name)
@@ -233,22 +228,15 @@ class CorpusIndex:
                 )
             )
 
-        hits.sort(
-            key=lambda hit: hit["score"],
-            reverse=True,
-        )
+        hits.sort(key=lambda hit: hit.score, reverse=True)
 
         # TODO: scores are different between corpora
         return hits[:num_results]
 
 
-def load_corpora(
-    corpora_root: Path,
-) -> dict[str, Path]:
+def load_corpora(corpora_root: Path) -> dict[str, Path]:
     if not corpora_root.is_dir():
-        raise ValueError(
-            f"Corpora directory does not exist in {corpora_root}"
-        )
+        raise ValueError(f"Corpora directory does not exist in {corpora_root}")
 
     corpora = {
         documents_path.parent.name: documents_path
@@ -258,23 +246,15 @@ def load_corpora(
     }
 
     if not corpora:
-        raise ValueError(
-            f"No corpora found in {corpora_root}"
-        )
+        raise ValueError(f"No corpora found in {corpora_root}")
 
     return corpora
 
 
-def read_documents(
-    documents_path: Path,
-) -> list[Document]:
+def read_documents(documents_path: Path) -> list[Document]:
     documents: list[Document] = []
 
-    with gzip.open(
-        documents_path,
-        "rt",
-        encoding="utf-8",
-    ) as handle:
+    with gzip.open(documents_path, "rt", encoding="utf-8") as handle:
         for line in handle:
             line = line.strip()
 
@@ -284,9 +264,7 @@ def read_documents(
             documents.append(json.loads(line))
 
     if not documents:
-        raise ValueError(
-            f"No documents found in {documents_path}."
-        )
+        raise ValueError(f"No documents found in {documents_path}.")
 
     return documents
 
@@ -317,20 +295,11 @@ def infer_language(
 def load_documents(
     corpora_root: Path,
 ) -> dict[str, CorpusDocuments]:
-    corpus_documents: dict[
-        str,
-        CorpusDocuments,
-    ] = {}
+    corpus_documents: dict[str, CorpusDocuments] = {}
 
-    for corpus_name, documents_path in load_corpora(
-        corpora_root
-    ).items():
+    for corpus_name, documents_path in load_corpora(corpora_root).items():
         documents = read_documents(documents_path)
-
-        language = infer_language(
-            corpus_name,
-            documents[0],
-        )
+        language = infer_language(corpus_name, documents[0])
 
         corpus_documents[corpus_name] = (
             documents,
@@ -340,9 +309,7 @@ def load_documents(
     return corpus_documents
 
 
-def build_index(
-    corpora_root: Path,
-) -> CorpusIndex:
+def build_index(corpora_root: Path) -> CorpusIndex:
     return CorpusIndex.build(
         load_documents(corpora_root)
     )
