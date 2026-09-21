@@ -8,6 +8,9 @@ from typing import Any, TypedDict
 
 import pyterrier as pt
 
+import hashlib
+import re
+
 from .config import (
     RETRIEVAL_DEFAULT_NUM_RESULTS,
     RETRIEVAL_DOCNO_META_LENGTH,
@@ -132,9 +135,45 @@ class CorpusIndex:
                 continue
             hits.extend(retriever.search(query, num_results=num_results, wmodel=wmodel))
         hits.sort(key=lambda hit: hit["score"], reverse=True)
-        # TODO: score are different between corpus
+
+        # Remove exact duplicate content before truncating the final results.
+        hits = deduplicate_exact(hits)
+
+        # TODO: scores are different between corpora
         return hits[:num_results]
 
+
+def normalize_text(text: str) -> str:
+    text = text.casefold()
+    text = re.sub(r"\s+", " ", text)
+    return text.strip()
+
+
+def deduplicate_exact(hits: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """Remove exact-content duplicates while keeping the highest-ranked hit."""
+
+    seen: set[str] = set()
+    unique: list[dict[str, Any]] = []
+
+    for hit in hits:
+        text = hit.get("text", "")
+
+        if not isinstance(text, str) or not text.strip():
+            unique.append(hit)
+            continue
+
+        normalized = normalize_text(text)
+        fingerprint = hashlib.sha256(
+            normalized.encode("utf-8")
+        ).hexdigest()
+
+        if fingerprint in seen:
+            continue
+
+        seen.add(fingerprint)
+        unique.append(hit)
+
+    return unique
 
 def load_corpora(corpora_root: Path) -> dict[str, Path]:
     if not corpora_root.is_dir():
