@@ -3,7 +3,6 @@ from __future__ import annotations
 import gzip
 import hashlib
 import json
-import re
 import tempfile
 from dataclasses import dataclass
 from pathlib import Path
@@ -16,7 +15,7 @@ from .config import (
     RETRIEVAL_DOCNO_META_LENGTH,
     RETRIEVAL_WMODEL,
 )
-from .passages import Passage, split_into_passages
+from .passages import Passage, normalize_text, split_into_passages
 
 
 class LanguageConfig(TypedDict):
@@ -43,25 +42,15 @@ Document = dict[str, Any]
 CorpusDocuments = tuple[list[Document], str]
 
 
-def normalize_text(text: str) -> str:
-    """Normalize text for exact-duplicate detection."""
-    text = text.casefold()
-    text = re.sub(r"\s+", " ", text)
-    return text.strip()
-
-
 def deduplicate_documents(documents: list[Document]) -> list[Document]:
-    """Remove exact-content duplicate documents before passage creation and indexing."""
+    """Remove empty and exact-content duplicate documents before passage creation and indexing."""
     seen: set[str] = set()
     unique: list[Document] = []
 
     for document in documents:
-        # Current corpus schema on main uses "content".
-        text = document.get("content") or ""
+        text = document.get("content", "")
 
-        # Do not collapse all empty documents into one duplicate.
         if not isinstance(text, str) or not text.strip():
-            unique.append(document)
             continue
 
         normalized = normalize_text(text)
@@ -98,12 +87,14 @@ class CorpusRetriever:
         if not documents:
             raise ValueError(f"Corpus {corpus_name!r} contains no documents.")
 
-        # Normalize for duplicate detection and remove duplicates
-        # before passage splitting and retrieval indexing.
-        documents = deduplicate_documents(documents)
-
         self._corpus_name = corpus_name
         self._language = language
+
+        # Normalize for duplicate detection and remove duplicates
+        # before passage splitting and retrieval indexing.
+        n_original = len(documents)
+        documents = deduplicate_documents(documents)
+        print(f"[{corpus_name}] removed {n_original - len(documents)} empty/duplicate documents")
 
         self._passages = {
             passage.passage_id: passage
@@ -176,10 +167,7 @@ class CorpusIndex:
         self._retrievers = retrievers
 
     @classmethod
-    def build(
-        cls,
-        corpus_documents: dict[str, CorpusDocuments],
-    ) -> CorpusIndex:
+    def build(cls, corpus_documents: dict[str, CorpusDocuments]) -> CorpusIndex:
         return cls(
             {
                 corpus_name: CorpusRetriever(
@@ -240,9 +228,7 @@ def load_corpora(corpora_root: Path) -> dict[str, Path]:
 
     corpora = {
         documents_path.parent.name: documents_path
-        for documents_path in sorted(
-            corpora_root.glob("*/documents.jsonl.gz")
-        )
+        for documents_path in sorted(corpora_root.glob("*/documents.jsonl.gz"))
     }
 
     if not corpora:
@@ -279,9 +265,7 @@ def infer_language(
     if corpus_name.endswith("-en"):
         return "en"
 
-    language = str(
-        sample_document.get("language", "")
-    ).strip().casefold()
+    language = str(sample_document.get("language", "")).strip().casefold()
 
     if language in LANGUAGE_CONFIG:
         return language
@@ -301,15 +285,10 @@ def load_documents(
         documents = read_documents(documents_path)
         language = infer_language(corpus_name, documents[0])
 
-        corpus_documents[corpus_name] = (
-            documents,
-            language,
-        )
+        corpus_documents[corpus_name] = (documents, language)
 
     return corpus_documents
 
 
 def build_index(corpora_root: Path) -> CorpusIndex:
-    return CorpusIndex.build(
-        load_documents(corpora_root)
-    )
+    return CorpusIndex.build(load_documents(corpora_root))

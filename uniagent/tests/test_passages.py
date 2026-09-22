@@ -49,7 +49,9 @@ DOCUMENTS = {
 
 
 def split(text: str, language: str = "de"):
-    return split_into_passages("corpus-de", "doc-1", "Titel", text, language)
+    return split_into_passages(
+        "corpus-de", "doc-1", "Titel", text, language, normalize=True
+    )
 
 
 def passage_containing(passages, needle: str):

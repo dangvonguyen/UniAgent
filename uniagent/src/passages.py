@@ -88,10 +88,19 @@ def normalize_text(raw_text: str) -> str:
 
 
 def split_into_passages(
-    corpus: str, doc_id: str, title: str, raw_text: str, language: str
+    corpus: str,
+    doc_id: str,
+    title: str,
+    text: str,
+    language: str,
+    *,
+    normalize: bool = False,
 ) -> list[Passage]:
     """Turn one document into an ordered list of passages."""
-    body = normalize_text(raw_text)
+    body = text
+    if normalize:
+        body = normalize_text(text)
+
     if not body:
         return []
 
