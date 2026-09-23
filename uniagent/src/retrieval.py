@@ -1,12 +1,17 @@
 from __future__ import annotations
 
+import asyncio
 import gzip
 import hashlib
 import json
 import tempfile
+import threading
+import time
+from concurrent.futures import ProcessPoolExecutor
 from dataclasses import dataclass
+from functools import partial
 from pathlib import Path
-from typing import Any, TypedDict
+from typing import Any, NamedTuple, TypedDict
 
 import pyterrier as pt
 
@@ -39,7 +44,25 @@ LANGUAGE_CONFIG: dict[str, LanguageConfig] = {
 
 
 Document = dict[str, Any]
-CorpusDocuments = tuple[list[Document], str]
+CorpusDocuments = tuple[list[Passage], str]
+
+# Terrier's underlying Java state is not thread-safe
+_TERRIER_LOCK = threading.Lock()
+
+
+class PreparedCorpus(NamedTuple):
+    passages: dict[str, Passage]
+    language: str
+
+
+@dataclass(frozen=True)
+class SearchHit:
+    passage: Passage
+    score: float
+
+    @property
+    def excerpt(self) -> str:
+        return f"{self.passage.title}\n\n{self.passage.text}"
 
 
 def deduplicate_documents(documents: list[Document]) -> list[Document]:
@@ -65,48 +88,31 @@ def deduplicate_documents(documents: list[Document]) -> list[Document]:
     return unique
 
 
-@dataclass(frozen=True)
-class SearchHit:
-    passage: Passage
-    score: float
+def _validate_query(query: str) -> str:
+    query = query.strip()
+    if not query:
+        raise ValueError("Query must not be empty.")
+    return query
 
-    @property
-    def excerpt(self) -> str:
-        return f"{self.passage.title}\n\n{self.passage.text}"
+
+def _validate_num_results(num_results: int) -> None:
+    if not 1 <= num_results <= 1000:
+        raise ValueError("num_results must be between 1 and 1000.")
 
 
 class CorpusRetriever:
     def __init__(
         self,
         corpus_name: str,
-        documents: list[Document],
+        passages: dict[str, Passage],
         language: str,
     ) -> None:
-        if language not in LANGUAGE_CONFIG:
-            raise ValueError(f"Unsupported corpus language: {language}")
-        if not documents:
-            raise ValueError(f"Corpus {corpus_name!r} contains no documents.")
+        if not passages:
+            raise ValueError(f"Corpus {corpus_name!r} contains no passages.")
 
         self._corpus_name = corpus_name
         self._language = language
-
-        # Normalize for duplicate detection and remove duplicates
-        # before passage splitting and retrieval indexing.
-        n_original = len(documents)
-        documents = deduplicate_documents(documents)
-        print(f"[{corpus_name}] removed {n_original - len(documents)} empty/duplicate documents")
-
-        self._passages = {
-            passage.passage_id: passage
-            for doc in documents
-            for passage in split_into_passages(
-                corpus_name,
-                doc["doc_id"],
-                doc["title"],
-                doc["content"],
-                language,
-            )
-        }
+        self._passages = passages
 
         self._index_dir = Path(tempfile.mkdtemp(prefix=f"index-{corpus_name}_"))
         self._index = self._build_index()
@@ -118,19 +124,13 @@ class CorpusRetriever:
         num_results: int = RETRIEVAL_DEFAULT_NUM_RESULTS,
         wmodel: str = RETRIEVAL_WMODEL,
     ) -> list[SearchHit]:
-        query = query.strip()
+        _validate_num_results(num_results)
 
-        if not query:
-            raise ValueError("Query must not be empty.")
+        query = _validate_query(query)
 
-        if not 1 <= num_results <= 1000:
-            raise ValueError("num_results must be between 1 and 1000.")
-
-        retriever = self._index.retriever(
-            wmodel,
-            num_results=num_results,
-        )
-        results = retriever.search(query)
+        with _TERRIER_LOCK:
+            retriever = self._index.retriever(wmodel, num_results=num_results)
+            results = retriever.search(query)
 
         return [
             SearchHit(
@@ -141,81 +141,84 @@ class CorpusRetriever:
         ]
 
     def _build_index(self) -> pt.terrier.TerrierIndex:
-        index = pt.terrier.TerrierIndex(str(self._index_dir))
+        with _TERRIER_LOCK:
+            index = pt.terrier.TerrierIndex(str(self._index_dir))
 
-        indexer = index.indexer(
-            meta={"docno": RETRIEVAL_DOCNO_META_LENGTH},
-            **LANGUAGE_CONFIG[self._language],
-        )
+            indexer = index.indexer(
+                meta={"docno": RETRIEVAL_DOCNO_META_LENGTH},
+                **LANGUAGE_CONFIG[self._language],
+            )
 
-        indexer.index(
-            {
-                "docno": passage.passage_id,
-                "text": f"{passage.title}\n{passage.text}",
-            }
-            for passage in self._passages.values()
-        )
+            indexer.index(
+                {
+                    "docno": passage.passage_id,
+                    "text": f"{passage.title}\n{passage.text}",
+                }
+                for passage in self._passages.values()
+            )
 
         return index
 
 
 class CorpusIndex:
-    def __init__(
-        self,
-        retrievers: dict[str, CorpusRetriever],
-    ) -> None:
+    def __init__(self, retrievers: dict[str, CorpusRetriever]) -> None:
         self._retrievers = retrievers
-
-    @classmethod
-    def build(cls, corpus_documents: dict[str, CorpusDocuments]) -> CorpusIndex:
-        return cls(
-            {
-                corpus_name: CorpusRetriever(
-                    corpus_name,
-                    documents,
-                    language,
-                )
-                for corpus_name, (documents, language) in corpus_documents.items()
-                if documents
-            }
-        )
 
     @property
     def corpora(self) -> list[str]:
         return list(self._retrievers)
 
-    def search(
+    @classmethod
+    async def build(cls, corpora: dict[str, PreparedCorpus]) -> CorpusIndex:
+        print("Building corpus indexes...")
+        start = time.perf_counter()
+        loop = asyncio.get_running_loop()
+
+        def _build_retriever(name: str, corpus: PreparedCorpus) -> CorpusRetriever:
+            return CorpusRetriever(name, corpus.passages, corpus.language)
+
+        tasks = [
+            loop.run_in_executor(None, _build_retriever, name, corpus)
+            for name, corpus in corpora.items()
+            if corpus.passages
+        ]
+        retrievers = await asyncio.gather(*tasks)
+
+        print(f"Corpus indexes built in {time.perf_counter() - start:.2f}s")
+        return cls(dict(zip(corpora.keys(), retrievers)))
+
+    async def search(
         self,
         query: str,
         num_results: int = RETRIEVAL_DEFAULT_NUM_RESULTS,
         wmodel: str = RETRIEVAL_WMODEL,
         corpora: list[str] | None = None,
     ) -> list[SearchHit]:
-        query = query.strip()
+        _validate_num_results(num_results)
 
-        if not query:
-            raise ValueError("Query must not be empty.")
-
-        if not 1 <= num_results <= 1000:
-            raise ValueError("num_results must be between 1 and 1000.")
+        query = _validate_query(query)
 
         targets = corpora if corpora else self.corpora
-        hits: list[SearchHit] = []
+        retrievers = [
+            self._retrievers[name] for name in targets if name in self._retrievers
+        ]
 
-        for corpus_name in targets:
-            retriever = self._retrievers.get(corpus_name)
+        if not retrievers:
+            return []
 
-            if retriever is None:
-                continue
-
-            hits.extend(
-                retriever.search(
-                    query,
-                    num_results=num_results,
-                    wmodel=wmodel,
-                )
+        loop = asyncio.get_running_loop()
+        tasks = [
+            loop.run_in_executor(
+                None,
+                partial(
+                    retriever.search, query, num_results=num_results, wmodel=wmodel
+                ),
             )
+            for retriever in retrievers
+        ]
+        per_corpus_hits = await asyncio.gather(*tasks)
 
+        hits = [hit for hits in per_corpus_hits for hit in hits]
         hits.sort(key=lambda hit: hit.score, reverse=True)
 
         # TODO: scores are different between corpora
@@ -276,19 +279,60 @@ def infer_language(
     )
 
 
-def load_documents(
+def _load_and_prepare_corpus(
+    corpus_name: str,
+    documents_path: Path,
+) -> tuple[str, PreparedCorpus]:
+    documents = read_documents(documents_path)
+    n_original = len(documents)
+    documents = deduplicate_documents(documents)
+    print(
+        f"[{corpus_name}] removed {n_original - len(documents)} empty/duplicate documents"
+    )
+
+    if not documents:
+        raise ValueError(
+            f"Corpus {corpus_name!r} has no documents after deduplication."
+        )
+
+    language = infer_language(corpus_name, documents[0])
+
+    passages = {
+        passage.passage_id: passage
+        for doc in documents
+        for passage in split_into_passages(
+            corpus_name, doc["doc_id"], doc["title"], doc["content"], language
+        )
+    }
+    return corpus_name, PreparedCorpus(passages, language)
+
+
+async def load_and_prepare_corpora(
     corpora_root: Path,
-) -> dict[str, CorpusDocuments]:
-    corpus_documents: dict[str, CorpusDocuments] = {}
+    *,
+    max_workers: int | None = None,
+) -> dict[str, PreparedCorpus]:
+    print(f"Preparing corpora from {corpora_root}...")
 
-    for corpus_name, documents_path in load_corpora(corpora_root).items():
-        documents = read_documents(documents_path)
-        language = infer_language(corpus_name, documents[0])
+    start = time.perf_counter()
+    loop = asyncio.get_running_loop()
 
-        corpus_documents[corpus_name] = (documents, language)
+    with ProcessPoolExecutor(max_workers=max_workers) as executor:
+        tasks = [
+            loop.run_in_executor(executor, _load_and_prepare_corpus, name, path)
+            for name, path in load_corpora(corpora_root).items()
+        ]
+        results = await asyncio.gather(*tasks)
 
-    return corpus_documents
+    print(f"Corpora prepared in {time.perf_counter() - start:.2f}s")
+    return dict(results)
 
 
-def build_index(corpora_root: Path) -> CorpusIndex:
-    return CorpusIndex.build(load_documents(corpora_root))
+async def build_index(
+    corpora_root: Path, *, max_workers: int | None = None
+) -> CorpusIndex:
+    prepared_corpora = await load_and_prepare_corpora(
+        corpora_root,
+        max_workers=max_workers,
+    )
+    return await CorpusIndex.build(prepared_corpora)

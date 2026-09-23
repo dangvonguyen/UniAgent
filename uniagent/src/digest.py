@@ -1,6 +1,7 @@
 """Resolve each rule against the corpora once per run."""
 
 import asyncio
+import time
 
 from pydantic import BaseModel
 
@@ -32,6 +33,7 @@ async def build_digest(
     rules: list[Rule], index: CorpusIndex, llm: LLM, trace: Trace
 ) -> list[ResolvedRule]:
     """Resolve every rule against the mounted corpora once per run."""
+    print(f"Resolving policy digest for {len(rules)} rules...", flush=True)
 
     async def _run_task(rule: Rule) -> list[PolicyQuote]:
         with trace.case(f"rule:{rule.id}"):
@@ -48,6 +50,8 @@ async def build_digest(
 async def _resolve_rule(
     rule: Rule, index: CorpusIndex, llm: LLM, trace: Trace
 ) -> list[PolicyQuote]:
+    start = time.perf_counter()
+
     trace.log(
         "input",
         input={"rule_id": rule.id, "check": rule.check, "queries": rule.queries},
@@ -60,7 +64,7 @@ async def _resolve_rule(
             tool="corpus_search",
             input={"query": query, "num_results": DIGEST_TOP_K},
         )
-        results = index.search(query, num_results=DIGEST_TOP_K)
+        results = await index.search(query, num_results=DIGEST_TOP_K)
         trace.log(
             "observation",
             output={
@@ -81,6 +85,7 @@ async def _resolve_rule(
     top = sorted(hits.values(), key=lambda hit: hit.score, reverse=True)[:DIGEST_TOP_K]
     docs = {f"D{i}": hit for i, hit in enumerate(top, 1)}
     if not docs:
+        _log_resolved(rule, [], start)
         return []
 
     excerpts = {
@@ -95,9 +100,10 @@ async def _resolve_rule(
         )
     except Exception as error:  # noqa: BLE001
         trace.log("error", status="error", error=str(error))
+        _log_resolved(rule, [], start)
         return []
 
-    return [
+    quotes = [
         PolicyQuote(
             corpus=docs[item.doc].passage.corpus,
             doc_id=docs[item.doc].passage.doc_id,
@@ -106,6 +112,16 @@ async def _resolve_rule(
         for item in answer.items
         if item.doc in excerpts and verified(item.quote, excerpts[item.doc])
     ]
+    _log_resolved(rule, quotes, start)
+    return quotes
+
+
+def _log_resolved(rule: Rule, quotes: list[PolicyQuote], start: float) -> None:
+    print(
+        f"  - {rule.id}: {len(quotes)} policy quote(s), "
+        f"in {time.perf_counter() - start:.2f}s",
+        flush=True,
+    )
 
 
 def _build_user_message(rule, excerpts) -> str:

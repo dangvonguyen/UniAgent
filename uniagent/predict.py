@@ -110,8 +110,7 @@ async def main() -> None:
         predictions_path.open("w", encoding="utf-8") as predictions,
     ):
         # Phase 1: build the retrieval index over the mounted corpora.
-        print(f"Building corpus index over {input_root}...", flush=True)
-        index = build_index(corpora_root)
+        index = await build_index(corpora_root)
 
         llm = LLM(
             settings.openai_base_url,
@@ -123,10 +122,7 @@ async def main() -> None:
 
         # Phase 2: resolve every rule's policy quotes once, shared across all cases.
         # Each rule traces under its own case_id.
-        print(f"Resolving policy digest for {len(RULES)} rules...", flush=True)
         rules = await build_digest(RULES, index, llm, trace)
-        for r in rules:
-            print(f"  - {r.rule.id}: {len(r.quotes)} policy quote(s)", flush=True)
 
         # Phase 3: decide each case against the resolved rule digest, concurrently.
         cases = case_dirs(input_root)
