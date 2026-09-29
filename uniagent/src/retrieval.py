@@ -4,9 +4,11 @@ import asyncio
 import gzip
 import hashlib
 import json
-import tempfile
+import shutil
 import threading
 import time
+from collections import defaultdict
+from collections.abc import Iterable
 from concurrent.futures import ProcessPoolExecutor
 from dataclasses import dataclass
 from functools import partial
@@ -16,8 +18,9 @@ from typing import Any, NamedTuple, TypedDict
 import pyterrier as pt
 
 from .config import (
-    RETRIEVAL_DEFAULT_NUM_RESULTS,
+    RETRIEVAL_DEPTH,
     RETRIEVAL_DOCNO_META_LENGTH,
+    RETRIEVAL_RRF_K,
     RETRIEVAL_WMODEL,
 )
 from .passages import Passage, normalize_text, split_into_passages
@@ -60,9 +63,34 @@ class SearchHit:
     passage: Passage
     score: float
 
+
+@dataclass(frozen=True)
+class FusedHit:
+    passage: Passage
+    score: float
+
     @property
     def excerpt(self) -> str:
         return f"{self.passage.title}\n\n{self.passage.text}"
+
+
+def fuse_by_reciprocal_rank(
+    ranked_lists: Iterable[list[SearchHit]], *, rrf_k: int = RETRIEVAL_RRF_K
+) -> list[FusedHit]:
+    """Merge ranked result lists into one ranking, best first."""
+    scores: dict[tuple[str, str], float] = defaultdict(float)
+    passages: dict[tuple[str, str], Passage] = {}
+
+    for hits in ranked_lists:
+        for rank, hit in enumerate(hits, 1):
+            key = (hit.passage.corpus, hit.passage.passage_id)
+            scores[key] += 1.0 / (rrf_k + rank)
+            passages.setdefault(key, hit.passage)
+
+    return [
+        FusedHit(passage=passages[key], score=scores[key])
+        for key in sorted(scores, key=lambda key: (-scores[key], key))
+    ]
 
 
 def deduplicate_documents(documents: list[Document]) -> list[Document]:
@@ -114,14 +142,14 @@ class CorpusRetriever:
         self._language = language
         self._passages = passages
 
-        self._index_dir = Path(tempfile.mkdtemp(prefix=f"index-{corpus_name}_"))
+        self._index_dir = Path(f"./runs/indices/index-{corpus_name}").resolve()
         self._index = self._build_index()
 
     def search(
         self,
         query: str,
         *,
-        num_results: int = RETRIEVAL_DEFAULT_NUM_RESULTS,
+        num_results: int = RETRIEVAL_DEPTH,
         wmodel: str = RETRIEVAL_WMODEL,
     ) -> list[SearchHit]:
         _validate_num_results(num_results)
@@ -140,9 +168,32 @@ class CorpusRetriever:
             for row in results.itertuples()
         ]
 
+    def _fingerprint(self) -> str:
+        """Hash of everything that determines index contents."""
+        digest = hashlib.sha256()
+        digest.update(f"{self._language}\0{RETRIEVAL_DOCNO_META_LENGTH}\0".encode())
+        for passage in self._passages.values():
+            digest.update(
+                f"{passage.passage_id}\0{passage.title}\0{passage.text}\0".encode()
+            )
+        return digest.hexdigest()
+
     def _build_index(self) -> pt.terrier.TerrierIndex:
+        fingerprint_path = self._index_dir / "passages.sha256"
+        fingerprint = self._fingerprint()
+
         with _TERRIER_LOCK:
             index = pt.terrier.TerrierIndex(str(self._index_dir))
+
+            if (
+                fingerprint_path.is_file()
+                and fingerprint_path.read_text().strip() == fingerprint
+            ):
+                print(f"[{self._corpus_name}] reusing cached index")
+                return index
+
+            if self._index_dir.exists():
+                shutil.rmtree(self._index_dir)
 
             indexer = index.indexer(
                 meta={"docno": RETRIEVAL_DOCNO_META_LENGTH},
@@ -156,6 +207,8 @@ class CorpusRetriever:
                 }
                 for passage in self._passages.values()
             )
+            # written last, so an interrupted build is never treated as cached
+            fingerprint_path.write_text(fingerprint)
 
         return index
 
@@ -189,40 +242,36 @@ class CorpusIndex:
 
     async def search(
         self,
-        query: str,
-        num_results: int = RETRIEVAL_DEFAULT_NUM_RESULTS,
+        queries: list[str],
+        depth: int = RETRIEVAL_DEPTH,
         wmodel: str = RETRIEVAL_WMODEL,
         corpora: list[str] | None = None,
-    ) -> list[SearchHit]:
-        _validate_num_results(num_results)
+    ) -> list[FusedHit]:
+        """Run every query against every corpus and fuse the ranked lists."""
+        _validate_num_results(depth)
 
-        query = _validate_query(query)
+        queries = [_validate_query(query) for query in queries]
 
         targets = corpora if corpora else self.corpora
         retrievers = [
             self._retrievers[name] for name in targets if name in self._retrievers
         ]
 
-        if not retrievers:
+        if not retrievers or not queries:
             return []
 
         loop = asyncio.get_running_loop()
         tasks = [
             loop.run_in_executor(
                 None,
-                partial(
-                    retriever.search, query, num_results=num_results, wmodel=wmodel
-                ),
+                partial(retriever.search, query, num_results=depth, wmodel=wmodel),
             )
             for retriever in retrievers
+            for query in queries
         ]
-        per_corpus_hits = await asyncio.gather(*tasks)
+        ranked_lists = await asyncio.gather(*tasks)
 
-        hits = [hit for hits in per_corpus_hits for hit in hits]
-        hits.sort(key=lambda hit: hit.score, reverse=True)
-
-        # TODO: scores are different between corpora
-        return hits[:num_results]
+        return fuse_by_reciprocal_rank(ranked_lists)
 
 
 def load_corpora(corpora_root: Path) -> dict[str, Path]:

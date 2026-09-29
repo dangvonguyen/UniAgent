@@ -17,12 +17,13 @@ LLM_TEMPERATURE = 0
 LLM_MAX_CONCURRENCY = 8
 
 # digest
-DIGEST_TOP_K = 3
+DIGEST_CONTEXT_K = 10  # excerpts handed to the LLM when resolving one rule
 DIGEST_MAX_DOC_CHARS = 3000
 
 # retrieval
 RETRIEVAL_DOCNO_META_LENGTH = 100
-RETRIEVAL_DEFAULT_NUM_RESULTS = 10
+RETRIEVAL_DEPTH = 100  # hits per (query, corpus) pair, before fusion
+RETRIEVAL_RRF_K = 60
 RETRIEVAL_WMODEL = "BM25"
 
 # passages

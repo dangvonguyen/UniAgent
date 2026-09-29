@@ -5,10 +5,10 @@ import time
 
 from pydantic import BaseModel
 
-from .config import DIGEST_MAX_DOC_CHARS, DIGEST_TOP_K
+from .config import DIGEST_CONTEXT_K, DIGEST_MAX_DOC_CHARS, RETRIEVAL_DEPTH
 from .llm import LLM, verified
 from .models import PolicyQuote, ResolvedRule, Rule
-from .retrieval import CorpusIndex, SearchHit
+from .retrieval import CorpusIndex
 from .tracelog import Trace
 
 SYSTEM = (
@@ -57,32 +57,29 @@ async def _resolve_rule(
         input={"rule_id": rule.id, "check": rule.check, "queries": rule.queries},
     )
 
-    hits: dict[tuple[str, str], SearchHit] = {}
-    for query in rule.queries:
-        trace.log(
-            "tool_call",
-            tool="corpus_search",
-            input={"query": query, "num_results": DIGEST_TOP_K},
-        )
-        results = await index.search(query, num_results=DIGEST_TOP_K)
-        trace.log(
-            "observation",
-            output={
-                "hits": [
-                    {
-                        "corpus": hit.passage.corpus,
-                        "passage_id": hit.passage.passage_id,
-                        "score": hit.score,
-                    }
-                    for hit in results
-                ]
-            },
-        )
-        for hit in results:
-            key = (hit.passage.corpus, hit.passage.passage_id)
-            if key not in hits or hit.score > hits[key].score:
-                hits[key] = hit
-    top = sorted(hits.values(), key=lambda hit: hit.score, reverse=True)[:DIGEST_TOP_K]
+    trace.log(
+        "tool_call",
+        tool="corpus_search",
+        input={"queries": rule.queries, "depth": RETRIEVAL_DEPTH},
+    )
+
+    hits = await index.search(rule.queries, depth=RETRIEVAL_DEPTH)
+    top = hits[:DIGEST_CONTEXT_K]
+
+    trace.log(
+        "observation",
+        output={
+            "candidates": len(hits),
+            "hits": [
+                {
+                    "corpus": hit.passage.corpus,
+                    "passage_id": hit.passage.passage_id,
+                    "rrf_score": hit.score,
+                }
+                for hit in top
+            ],
+        },
+    )
     docs = {f"D{i}": hit for i, hit in enumerate(top, 1)}
     if not docs:
         _log_resolved(rule, [], start)

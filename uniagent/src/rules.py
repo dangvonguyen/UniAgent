@@ -1,6 +1,5 @@
 from .models import Rule
 
-
 RULES: list[Rule] = [
     Rule(
         id="application_approval_timing",
@@ -19,7 +18,6 @@ RULES: list[Rule] = [
             ),
         ],
     ),
-
     Rule(
         id="reimbursement_claim_timing",
         check=(
@@ -38,7 +36,6 @@ RULES: list[Rule] = [
             ),
         ],
     ),
-
     Rule(
         id="domestic_accommodation_reimbursement",
         check=(
@@ -58,7 +55,6 @@ RULES: list[Rule] = [
             ),
         ],
     ),
-
     Rule(
         id="foreign_accommodation_reimbursement",
         check=(
@@ -77,7 +73,6 @@ RULES: list[Rule] = [
             ),
         ],
     ),
-
     Rule(
         id="business_private_trip_combination",
         check=(
@@ -95,7 +90,6 @@ RULES: list[Rule] = [
             ),
         ],
     ),
-
     Rule(
         id="a1_certificate_requirements",
         check=(
@@ -113,7 +107,6 @@ RULES: list[Rule] = [
             ),
         ],
     ),
-
     Rule(
         id="transport_mode_selection",
         check=(
@@ -132,7 +125,6 @@ RULES: list[Rule] = [
             ),
         ],
     ),
-
     Rule(
         id="invoice_billing_requirements",
         check=(
@@ -150,7 +142,6 @@ RULES: list[Rule] = [
             ),
         ],
     ),
-
     Rule(
         id="event_side_program_costs",
         check=(
@@ -169,7 +160,6 @@ RULES: list[Rule] = [
             ),
         ],
     ),
-
     Rule(
         id="third_party_reimbursement",
         check=(
