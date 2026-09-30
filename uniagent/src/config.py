@@ -1,6 +1,7 @@
 """Centralized runtime configuration: environment-derived settings and tunable constants."""
 
 import os
+from pathlib import Path
 
 from pydantic import BaseModel
 
@@ -8,6 +9,15 @@ REQUIRED_ENV_VARS = ("OPENAI_BASE_URL", "OPENAI_API_KEY", "OPENAI_MODEL")
 
 RETRIEVAL_CORPORA_DIR = "retrieval-corpora"
 DEFAULT_MAX_TOKENS = 8192
+
+WORK_DIR = Path(__file__).resolve().parents[1]
+
+RESOURCES_DIR = WORK_DIR / "resources"
+
+# caches
+CACHE_DIR = WORK_DIR / "runs"
+PASSAGE_CACHE_DIR = CACHE_DIR / "passages"
+INDEX_CACHE_DIR = CACHE_DIR / "indices"
 
 # llm
 LLM_MAX_RETRIES = 2

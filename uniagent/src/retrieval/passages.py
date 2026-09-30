@@ -24,7 +24,7 @@ from typing import NamedTuple
 
 import pysbd
 
-from .config import (
+from src.config import (
     PASSAGE_MAX_CHARS,
     PASSAGE_MIN_STANDALONE_BLOCK_CHARS,
     PASSAGE_TAIL_MIN_CHARS,

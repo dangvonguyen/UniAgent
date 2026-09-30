@@ -10,7 +10,7 @@ Verdict = Literal["pass", "fail", "not_applicable", "unknown"]
 class Rule(BaseModel):
     id: str
     check: str  # topic and what to compare; never a value, never the rule's logic
-    queries: list[str]
+    queries: dict[str, list[str]]  # language code -> queries
 
 
 class PolicyQuote(BaseModel):
