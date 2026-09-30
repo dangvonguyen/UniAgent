@@ -85,7 +85,7 @@ async def _check_rule(
     )
     try:
         answer = await llm.complete_json(
-            SYSTEM, user, CheckAnswer, context=f"check_rule:{rule.id}"
+            SYSTEM, user, CheckAnswer, context=f"{case.case_id}:check_rule:{rule.id}"
         )
     except Exception as error:  # noqa: BLE001
         trace.log("error", status="error", error=str(error))

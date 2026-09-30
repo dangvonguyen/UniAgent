@@ -1,17 +1,17 @@
 import asyncio
 import json
 import re
+import time
 from typing import TypeVar
 
 import json_repair
 from openai import AsyncOpenAI
-from openai.types.responses import ResponseInputParam
+from openai.types.responses import Response, ResponseInputParam
 from pydantic import BaseModel, ValidationError
 
 from .config import (
     LLM_COMPLETION_ATTEMPTS,
     LLM_MAX_CONCURRENCY,
-    LLM_MAX_RETRIES,
     LLM_TEMPERATURE,
     LLM_TIMEOUT_SECONDS,
 )
@@ -26,6 +26,28 @@ def verified(quote: str | None, source: str) -> bool:
     return bool(normalize(quote)) and normalize(quote) in normalize(source)
 
 
+def _answer_text(response: Response) -> str:
+    """The model's answer text.
+
+    gpt-oss emits its final JSON on a `<|constrain|>Schema` channel, which vLLM
+    surfaces as an `mcp_call` item instead of a message, leaving `output_text` empty.
+    """
+    if response.output_text:
+        return response.output_text
+    for item in response.output:
+        if item.type in ("mcp_call", "function_call") and item.arguments:
+            return item.arguments
+    return ""
+
+
+def _log(context: str, attempt: int, message: str) -> None:
+    label = f"{context} " if context else ""
+    print(
+        f"  [llm] {label}attempt {attempt + 1}/{LLM_COMPLETION_ATTEMPTS}: {message}",
+        flush=True,
+    )
+
+
 class LLM:
     def __init__(
         self, api_base: str, api_key: str, model: str, max_tokens: int, trace: Trace
@@ -33,7 +55,6 @@ class LLM:
         self._client = AsyncOpenAI(
             api_key=api_key,
             base_url=api_base,
-            max_retries=LLM_MAX_RETRIES,
             timeout=LLM_TIMEOUT_SECONDS,
         )
         self._model = model
@@ -61,6 +82,7 @@ class LLM:
 
         for attempt in range(LLM_COMPLETION_ATTEMPTS):
             log_input = {"context": context, "attempt": attempt, "messages": messages}
+            start = time.perf_counter()
 
             try:
                 response = await self._client.responses.create(
@@ -71,6 +93,11 @@ class LLM:
                 )
             except Exception as err:  # noqa: BLE001
                 last_error = str(err)
+                _log(
+                    context,
+                    attempt,
+                    f"request failed after {time.perf_counter() - start:.2f}s: {last_error}",
+                )
                 self._trace.log(
                     "error",
                     input=log_input,
@@ -79,7 +106,7 @@ class LLM:
                 )
                 continue
 
-            content = response.output_text
+            content = _answer_text(response)
             reasoning = (
                 "\n\n".join(
                     part.text
@@ -91,9 +118,18 @@ class LLM:
             )
             usage = response.usage.model_dump() if response.usage else None
             try:
-                answer = schema.model_validate(json_repair.loads(content or "") or {})
-            except ValidationError as err:
+                payload = json_repair.loads(content)
+                if not isinstance(payload, dict) or not payload:
+                    raise ValueError(f"no JSON object in model output: {content!r}")
+                answer = schema.model_validate(payload)
+            except (ValidationError, ValueError) as err:
                 last_error = str(err)
+                _log(
+                    context,
+                    attempt,
+                    f"invalid answer after {time.perf_counter() - start:.2f}s "
+                    f"({last_error[:120]!r}), retrying",
+                )
                 self._trace.log(
                     "model_call",
                     input=log_input,
@@ -108,6 +144,12 @@ class LLM:
                 answer = None
 
             if answer is not None:
+                tokens = usage.get("total_tokens") if usage else None
+                _log(
+                    context,
+                    attempt,
+                    f"ok in {time.perf_counter() - start:.2f}s, tokens={tokens}",
+                )
                 self._trace.log(
                     "model_call",
                     input=log_input,
@@ -119,6 +161,11 @@ class LLM:
                 )
                 return answer
 
+        print(
+            f"  [llm] {context + ' ' if context else ''}giving up after "
+            f"{LLM_COMPLETION_ATTEMPTS} attempt(s): {last_error}; returning empty answer",
+            flush=True,
+        )
         self._trace.log(
             "error",
             input=log_input,
