@@ -2,6 +2,8 @@ from .models import Rule
 
 # Queries are BM25 keyword bags fused by reciprocal rank, so each rule gets several
 # short queries, one per facet , instead of one long query that dilutes every term.
+# Questions are natural-language questions the policy text answers, for dense retrieval
+# and reranking, which match sentences rather than keywords.
 
 RULES: list[Rule] = [
     Rule(
@@ -24,6 +26,17 @@ RULES: list[Rule] = [
                 "business trip approval exception retroactive",
             ],
         },
+        questions={
+            "de": [
+                "Wer muss eine Dienstreise genehmigen oder anordnen, und in welcher Form?",
+                "Kann eine Dienstreise auch nachträglich genehmigt werden?",
+                "Für wen ist keine Genehmigung einer Dienstreise erforderlich?",
+            ],
+            "en": [
+                "Who approve a business trip, and in what form?",
+                "Are there exceptions to the approval requirement for business trips?",
+            ],
+        },
     ),
     Rule(
         id="expense_claim_submission",
@@ -41,6 +54,17 @@ RULES: list[Rule] = [
             "en": [
                 "travel expense claim submission deadline",
                 "travel expense claim time limit end of trip",
+            ],
+        },
+        questions={
+            "de": [
+                "Innerhalb welcher Frist muss die Reisekostenvergütung beantragt werden?",
+                "Welche Folgen hat eine verspätete Reisekostenabrechnung?",
+                "Wie und wo wird die Reisekostenabrechnung eingereicht?",
+            ],
+            "en": [
+                "By when must a travel expense claim be submitted after the trip ends?",
+                "What happens if a travel expense claim is submitted late?",
             ],
         },
     ),
@@ -62,6 +86,17 @@ RULES: list[Rule] = [
                 "domestic business trip accommodation overnight costs reimbursement",
                 "overnight allowance hotel costs reimbursement",
                 "accommodation costs justification evidence exception",
+            ],
+        },
+        questions={
+            "de": [
+                "Welche Übernachtungskosten werden bei Dienstreisen im Inland erstattet?",
+                "Unter welchen Voraussetzungen werden Übernachtungskosten erstattet?",
+                "Welche Ausnahmen gelten für die Erstattung von Übernachtungskosten?",
+            ],
+            "en": [
+                "Which hotel costs are reimbursed for overnight stays on domestic business trips?",
+                "Under what conditions are accommodation costs reimbursed?",
             ],
         },
     ),
@@ -86,6 +121,16 @@ RULES: list[Rule] = [
                 "foreign travel overnight allowance country",
             ],
         },
+        questions={
+            "de": [
+                "Welche Übernachtungskosten werden bei Auslandsdienstreisen erstattet?",
+                "Wie wird das Auslandsübernachtungsgeld bemessen?",
+            ],
+            "en": [
+                "Which accommodation costs are reimbursed for business trips abroad?",
+                "How is the overnight allowance for travel abroad determined?",
+            ],
+        },
     ),
     Rule(
         id="business_private_trip_combination",
@@ -105,6 +150,17 @@ RULES: list[Rule] = [
             "en": [
                 "business trip combined with private travel vacation",
                 "business trip private stay extension",
+            ],
+        },
+        questions={
+            "de": [
+                "Wie werden Reisekosten erstattet, wenn eine Dienstreise mit einem Urlaub oder einer privaten Reise verbunden wird?",
+                "Was gilt, wenn Beschäftigte vor oder nach der Dienstreise privat am Reiseziel bleiben?",
+                "Muss ein privater Reiseteil angezeigt oder genehmigt werden?",
+            ],
+            "en": [
+                "How are travel costs reimbursed when a business trip is combined with a holiday or private travel?",
+                "Must the private part of a combined trip be reported or approved?",
             ],
         },
     ),
@@ -128,6 +184,16 @@ RULES: list[Rule] = [
                 "A1 certificate application business trip abroad",
             ],
         },
+        questions={
+            "de": [
+                "Wann wird für eine Dienstreise ins Ausland eine A1-Bescheinigung benötigt, und wie wird sie beantragt?",
+                "Wie und wann wird eine A1-Bescheinigung beantragt?",
+                "Für welche Länder ist eine Entsendebescheinigung erforderlich?",
+            ],
+            "en": [
+                "When is an A1 social security certificate required for a business trip abroad, and how is it applied for?",
+            ],
+        },
     ),
     Rule(
         id="transport_costs",
@@ -147,6 +213,19 @@ RULES: list[Rule] = [
             "en": [
                 "transport costs class of travel reimbursement",
                 "business trip flight train choice",
+            ],
+        },
+        questions={
+            "de": [
+                "Welche Fahrtkosten für öffentliche Verkehrsmittel werden bei Dienstreisen erstattet?",
+                "Welche Beförderungsklasse ist erstattungsfähig?",
+                "Wann werden Flugkosten erstattet?",
+                "Wie werden Kosten für ein privates Kraftfahrzeug, Taxi oder Mietwagen erstattet?",
+            ],
+            "en": [
+                "Which travel class is reimbursed for train or air travel on business trips?",
+                "When are flight costs reimbursed?",
+                "How are private car, taxi or rental car costs reimbursed?",
             ],
         },
     ),
@@ -171,6 +250,17 @@ RULES: list[Rule] = [
                 "travel expenses receipts proof",
             ],
         },
+        questions={
+            "de": [
+                "Welche Belege müssen der Reisekostenabrechnung beigefügt werden?",
+                "Auf wen müssen Rechnungen für Dienstreisen ausgestellt sein?",
+                "Was gilt, wenn ein Beleg fehlt oder verloren gegangen ist?",
+            ],
+            "en": [
+                "Which receipts must be submitted with a travel expense claim?",
+                "What applies if a receipt is missing or lost?",
+            ],
+        },
     ),
     Rule(
         id="event_side_program_costs",
@@ -189,6 +279,17 @@ RULES: list[Rule] = [
             "en": [
                 "side programme accompanying programme event costs",
                 "conference fee includes meals",
+            ],
+        },
+        questions={
+            "de": [
+                "Welche Kosten einer Tagung werden erstattet, etwa Teilnahmegebühren?",
+                "Werden Kosten für ein Rahmenprogramm oder Ausflüge bei Tagungen erstattet?",
+                "Wie werden im Tagungsbeitrag enthaltene Mahlzeiten berücksichtigt?",
+            ],
+            "en": [
+                "Which conference costs are reimbursed, such as fees, included meals or social programme?",
+                "How are meals included in a conference fee treated?",
             ],
         },
     ),
@@ -210,6 +311,16 @@ RULES: list[Rule] = [
             "en": [
                 "travel costs covered by third party offset",
                 "third-party funding travel costs reimbursement",
+            ],
+        },
+        questions={
+            "de": [
+                "Wie werden Leistungen von dritter Stelle auf die Reisekostenvergütung angerechnet?",
+                "Welche Bestimmungen gelten für Dienstreisen, die aus Drittmitteln finanziert werden?",
+            ],
+            "en": [
+                "How are travel costs that are paid by a third party or a funder treated in the reimbursement?",
+                "Which rules apply to business trips funded by third-party grants?",
             ],
         },
     ),

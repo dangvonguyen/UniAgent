@@ -10,6 +10,8 @@ dependencies = [
     "pydantic>=2.13.5",
     "pysbd>=0.3.4",
     "pyterrier[all]>=1.1.2",
+    "sentence-transformers>=6.1.0",
+    "tira>=0.0.205",
 ]
 
 [dependency-groups]
@@ -17,7 +19,11 @@ dev = [
     "ipykernel>=7.3.0",
     "mypy>=2.3.1",
     "pytest>=9.1.1",
+    "reportlab>=5.0.1",
 ]
+
+[tool.ruff]
+src = ["uniagent"]
 
 [tool.pytest.ini_options]
 testpaths = ["uniagent/tests"]

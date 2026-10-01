@@ -54,16 +54,25 @@ async def _resolve_rule(
 
     trace.log(
         "input",
-        input={"rule_id": rule.id, "check": rule.check, "queries": rule.queries},
+        input={
+            "rule_id": rule.id,
+            "check": rule.check,
+            "queries": rule.queries,
+            "questions": rule.questions,
+        },
     )
 
     trace.log(
         "tool_call",
         tool="corpus_search",
-        input={"queries": rule.queries, "depth": RETRIEVAL_DEPTH},
+        input={
+            "queries": rule.queries,
+            "questions": rule.questions,
+            "depth": RETRIEVAL_DEPTH,
+        },
     )
 
-    hits = await index.search(rule.queries, depth=RETRIEVAL_DEPTH)
+    hits = await index.search(rule.queries, rule.questions, depth=RETRIEVAL_DEPTH)
     top = hits[:DIGEST_CONTEXT_K]
 
     trace.log(

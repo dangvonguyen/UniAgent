@@ -18,6 +18,7 @@ RESOURCES_DIR = WORK_DIR / "resources"
 CACHE_DIR = WORK_DIR / "runs"
 PASSAGE_CACHE_DIR = CACHE_DIR / "passages"
 INDEX_CACHE_DIR = CACHE_DIR / "indices"
+EMBEDDING_CACHE_DIR = CACHE_DIR / "embeddings"
 
 # llm
 LLM_MAX_RETRIES = 2
@@ -35,6 +36,10 @@ RETRIEVAL_DOCNO_META_LENGTH = 100
 RETRIEVAL_DEPTH = 100  # hits per (query, corpus) pair, before fusion
 RETRIEVAL_RRF_K = 60
 RETRIEVAL_WMODEL = "BM25"
+
+# dense
+DENSE_MODEL = "sentence-transformers/static-similarity-mrl-multilingual-v1"
+DENSE_BATCH_SIZE = 256
 
 # passages
 PASSAGE_TARGET_CHARS = 1500
