@@ -1,154 +1,215 @@
 from .models import Rule
 
+# Queries are BM25 keyword bags fused by reciprocal rank, so each rule gets several
+# short queries, one per facet , instead of one long query that dilutes every term.
+
 RULES: list[Rule] = [
     Rule(
         id="trip_approval",
         check=(
-            "Determine the relationship between the timing of a business-trip "
-            "application or approval and the timing of the trip."
+            "Business-trip approval: compare when and by whom the trip was applied "
+            "for and approved with the trip dates, against the policy's requirements "
+            "on approval of business trips, including any exceptions."
         ),
         queries={
             "de": [
-                "Dienstreise Dienstreiseantrag Antragstellung Genehmigung Zeitpunkt Frist Reisebeginn Reiseantritt"
+                "Dienstreise Genehmigung Anordnung",
+                "Dienstreise Genehmigung Form schriftlich elektronisch",
+                "Dienstreise Genehmigung Ausnahme nachträglich",
+                "Dienstreise Genehmigung Ausnahme Amt Funktion",
+                "Dienstreise Genehmigung Zuständigkeit Vorgesetzte Dienststelle",
             ],
             "en": [
-                "business trip application approval timing deadline trip start travel commencement"
+                "business trip approval authorisation",
+                "business trip approval exception retroactive",
             ],
         },
     ),
     Rule(
         id="expense_claim_submission",
         check=(
-            "Determine the timing rules that apply to claiming, submitting, "
-            "or settling business-trip expenses."
+            "Expense claim submission: compare when and how the travel-expense claim "
+            "was submitted, relative to the end of the trip, against the policy's "
+            "requirements on claiming travel expenses, including any exceptions."
         ),
         queries={
             "de": [
-                "Dienstreise Reisekosten Reisekostenabrechnung Reisekostenvergütung Erstattung Antrag Abrechnung Frist Ausschlussfrist"
+                "Reisekostenvergütung Antrag Ausschlussfrist",
+                "Reisekostenabrechnung Einreichung Frist Beendigung Dienstreise",
+                "Reisekostenvergütung Ausschlussfrist Beendigung Dienstreise beantragen",
             ],
             "en": [
-                "business trip travel expenses reimbursement claim submission settlement application deadline time limit"
+                "travel expense claim submission deadline",
+                "travel expense claim time limit end of trip",
             ],
         },
     ),
     Rule(
         id="accommodation_costs_domestic",
         check=(
-            "Determine how accommodation costs for domestic business trips "
-            "are reimbursed, including whether any limits or justification "
-            "conditions apply."
+            "Domestic accommodation costs: compare the case's overnight "
+            "accommodation costs for a trip within the country against the policy's "
+            "reimbursement rule for domestic overnight costs, including any "
+            "conditions, justification clauses and exceptions."
         ),
         queries={
             "de": [
-                "Dienstreise Inland Reisekosten Übernachtung Übernachtungskosten Hotelkosten Erstattung Höchstbetrag Höchstgrenze Nachweis Begründung"
+                "Übernachtungskosten Dienstreise Inland Erstattung",
+                "Übernachtungsgeld Übernachtungskosten Hotel Erstattung",
+                "Übernachtungskosten Begründung Nachweis Ausnahme",
             ],
             "en": [
-                "domestic business trip accommodation hotel overnight cost reimbursement limit maximum justification evidence"
+                "domestic business trip accommodation overnight costs reimbursement",
+                "overnight allowance hotel costs reimbursement",
+                "accommodation costs justification evidence exception",
             ],
         },
     ),
     Rule(
         id="accommodation_costs_abroad",
         check=(
-            "Determine how accommodation costs for business trips abroad "
-            "are reimbursed and what conditions apply."
+            "Foreign accommodation costs: compare the case's overnight accommodation "
+            "costs for a trip abroad, and the destination country, against the "
+            "policy's reimbursement rule for overnight costs abroad, including any "
+            "conditions, justification clauses and exceptions."
         ),
         queries={
             "de": [
-                "Auslandsdienstreise Ausland Reisekosten Übernachtung Übernachtungskosten Hotelkosten Erstattung Auslandsreisekosten"
+                "Auslandsdienstreise Übernachtungskosten Erstattung",
+                "Auslandsdienstreisen Auslandstagegeld Auslandsübernachtungsgeld",
+                "Auslandsdienstreise Übernachtungskosten Begründung Nachweis Ausnahme",
+                "Auslandsdienstreise Begriff Ausland Inland Dienstreise",
+                "Auslandsübernachtungsgeld Übernachtungskosten notwendig",
             ],
             "en": [
-                "foreign business trip abroad accommodation hotel overnight expenses travel cost reimbursement"
+                "business trip abroad accommodation overnight costs reimbursement",
+                "foreign travel overnight allowance country",
             ],
         },
     ),
     Rule(
         id="business_private_trip_combination",
         check=(
-            "Determine how combining a business trip with private travel "
-            "or a private stay affects travel-expense reimbursement."
+            "Combining business and private travel: compare any private days, "
+            "private stay or private detour in the case against the policy's rules "
+            "on business trips combined with private travel, including notification, "
+            "cost allocation and exceptions."
         ),
         queries={
             "de": [
-                "Dienstreise Privatreise Privataufenthalt private Verlängerung Verbindung Reisekosten Fahrtkosten Erstattung"
+                "Verbindung Dienstreise private Reise",
+                "Dienstreise Urlaub Verbindung Reisekostenvergütung",
+                "Dienstreise Privataufenthalt private Verlängerung",
+                "Dienstreise Urlaub Reiseweg Fahrtkosten",
             ],
             "en": [
-                "business trip private travel private stay extension combined journey travel expenses reimbursement"
+                "business trip combined with private travel vacation",
+                "business trip private stay extension",
             ],
         },
     ),
     Rule(
         id="cross_border_social_security_coverage",
         check=(
-            "Determine what rules, if any, apply to an A1 certificate for "
-            "business travel or work abroad, including relevant timing."
+            "Social-security coverage for work abroad: compare the case's "
+            "destination, trip dates and any social-security certificate or its "
+            "application against the policy's requirements for such certificates, "
+            "including scope, timing and exceptions."
         ),
         queries={
             "de": [
-                "A1 Bescheinigung A1-Bescheinigung Auslandsdienstreise Entsendung Ausland Antrag Frist Vorlauf Sozialversicherung"
+                "A1 Bescheinigung Sozialversicherung Ausland",
+                "Entsendebescheinigung Antrag Auslandsdienstreise",
+                "A1 Bescheinigung beantragen rechtzeitig vor Reiseantritt",
+                "Auslandsdienstreise Sozialversicherung Krankenversicherung Ausland",
             ],
             "en": [
-                "A1 certificate foreign business trip posting abroad application timing deadline social security"
+                "A1 certificate social security abroad",
+                "A1 certificate application business trip abroad",
             ],
         },
     ),
     Rule(
         id="transport_costs",
         check=(
-            "Determine how the choice of transport mode for a business trip "
-            "is assessed, including relevant cost or economic considerations."
+            "Transport costs: compare the case's means of transport, travel class "
+            "and fares against the policy's rules on reimbursable transport costs, "
+            "including any justification clauses and exceptions."
         ),
         queries={
             "de": [
-                "Dienstreise Reisekosten Beförderungsmittel Verkehrsmittel Flug Bahn Zug Flugkosten Fahrtkosten Wirtschaftlichkeit wirtschaftlich notwendig"
+                "Fahrtkosten Flugkosten Erstattung",
+                "regelmäßig verkehrendes Beförderungsmittel Beförderungsklasse",
+                "Beförderungsklasse Ausnahme Begründung Erstattung",
+                "Bahnfahrt Klasse Dienstreise",
+                "Flugreise Dienstreise Kosten Bahnfahrt",
             ],
             "en": [
-                "business trip travel transport mode flight train rail travel costs economic economical necessity reimbursement"
+                "transport costs class of travel reimbursement",
+                "business trip flight train choice",
             ],
         },
     ),
     Rule(
         id="invoice_formalities",
         check=(
-            "Determine what rules apply to invoice addressee and billing "
-            "information for expenses connected with business trips."
+            "Invoice and receipt formalities: compare the case's invoices and "
+            "receipts (addressee, issuer, itemisation, originals) against the "
+            "policy's requirements on documenting travel expenses, including any "
+            "exceptions."
         ),
         queries={
             "de": [
-                "Dienstreise Reisekosten Rechnung Rechnungsempfänger Rechnungsadresse Universität Kassel Abrechnung Beleg"
+                "Rechnung Rechnungsempfänger Rechnungsanschrift",
+                "Reisekosten Belege Nachweis Kostennachweise",
+                "Belege Reisekostenabrechnung beifügen vorlegen",
+                "Rechnung ausgestellt auf Name Dienststelle",
+                "Hotelrechnung Rechnungsempfänger Dienstreise",
             ],
             "en": [
-                "business trip travel expenses invoice addressee billing address university reimbursement receipt"
+                "invoice addressee billing address",
+                "travel expenses receipts proof",
             ],
         },
     ),
     Rule(
         id="event_side_program_costs",
         check=(
-            "Determine how costs for side programmes, accompanying programmes, "
-            "or evening activities connected with an event are treated."
+            "Event side-programme costs: compare any costs in the case for social, "
+            "cultural or accompanying parts of an event against the policy's rules "
+            "on which event-related costs are reimbursable, including any exceptions."
         ),
         queries={
             "de": [
-                "Rahmenprogramm Rahmenprogramme Begleitprogramm Abendprogramm Veranstaltung Aufwendungen Kosten Bewirtungskosten Teilnahmegebühren Finanzierung Erstattung"
+                "Rahmenprogramm Begleitprogramm Veranstaltung Kosten",
+                "Bewirtung Veranstaltung Kosten Erstattung",
+                "Teilnahmegebühr Tagung Verpflegung Mahlzeiten",
+                "Veranstaltung Mahlzeiten Teilnahmegebühr Erstattung",
             ],
             "en": [
-                "event side programme accompanying programme evening programme expenses costs participation fees financing reimbursement"
+                "side programme accompanying programme event costs",
+                "conference fee includes meals",
             ],
         },
     ),
     Rule(
         id="third_party_funding",
         check=(
-            "Determine how business-trip expenses are treated when costs "
-            "may also be financed, paid, or reimbursed by another source."
+            "Third-party funding: compare any costs in the case that are covered, "
+            "paid or reimbursed by another party against the policy's rules on "
+            "travel costs borne by third parties, including any exceptions."
         ),
         queries={
             "de": [
-                "Dienstreise Reisekosten Drittmittel Dritte dritte Seite Erstattung Finanzierung Zahlung Anrechnung Kostenübernahme"
+                "Reisekosten Kostenübernahme Dritte Anrechnung",
+                "Leistungen dritter Seite Reisekostenvergütung",
+                "Drittmittelprojekt Dienstreise Zuwendungsgeber",
+                "Dienstreise Kosten von anderer Stelle erstattet",
+                "Drittmittelgeber Bestimmungen Reisekosten Dienstreise",
             ],
             "en": [
-                "business trip travel expenses third party funding reimbursement payment financing cost coverage credit"
+                "travel costs covered by third party offset",
+                "third-party funding travel costs reimbursement",
             ],
         },
     ),
