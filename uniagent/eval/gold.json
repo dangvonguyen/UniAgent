@@ -1,0 +1,234 @@
+{
+ "rules": {
+  "trip_approval": [
+   {
+    "key": "approval_required",
+    "corpus": "university-kassel-public-de",
+    "doc_id": "32bc169e-4d0b-4931-9b72-bf425ec7311b",
+    "quote": "Reisekosten können nur für Dienstreisen und Reisen zur Fortbildung im dienstlichen Interesse erstattet werden, wenn diese vorher angeordnet oder genehmigt sind. Liegt keine Genehmigung vor, ist keine Abrechnung möglich!"
+   },
+   {
+    "key": "approval_retroactive",
+    "corpus": "hessian-law-de",
+    "doc_id": "VVHE-VVHE000013868",
+    "quote": "Dienstreisen müssen grundsätzlich vor Antritt schriftlich oder elektronisch angeordnet oder genehmigt werden. Die nachträgliche Genehmigung ist ausnahmsweise zulässig, wenn sie vor der Abreise nicht mehr eingeholt werden konnte."
+   },
+   {
+    "key": "approval_not_required",
+    "corpus": "hessian-law-de",
+    "doc_id": "jlr-NNLHE0000518BNN00000000004",
+    "quote": "Eine Anordnung oder Genehmigung ist nicht erforderlich, wenn sie nach dem Amt der oder des Dienstreisenden oder dem Wesen des Dienstgeschäfts nicht in Betracht kommt oder die Dienstreise am Dienst- oder Wohnort stattfindet."
+   },
+   {
+    "key": "approval_by_office",
+    "corpus": "university-kassel-public-de",
+    "doc_id": "32bc169e-4d0b-4931-9b72-bf425ec7311b",
+    "quote": "Mit dem Präsidiumsbeschluss 656 vom 21.07.2025 gelten Dienstreisen und Reisen zum Zwecke der Fortbildung im Inland mit einer Dauer von bis sieben Tagen für Professorinnen und Professoren mit sofortiger Wirkung grundsätzlich qua Amt als genehmigt gem. § 2 Abs. 1 Satz 2 Hessisches Reisekostengesetz."
+   }
+  ],
+  "accommodation_costs_domestic": [
+   {
+    "key": "overnight_statute",
+    "corpus": "hessian-law-de",
+    "doc_id": "jlr-NNLHE0000518BNN00000000016",
+    "quote": "Für notwendige Übernachtungen erhalten Dienstreisende ein pauschales Übernachtungsgeld von 20 Euro pro Nacht. Höhere Übernachtungskosten werden erstattet, wenn sie unvermeidbar sind."
+   },
+   {
+    "key": "overnight_threshold",
+    "corpus": "hessian-law-de",
+    "doc_id": "VVHE-VVHE000013868",
+    "quote": "Übernachtungskosten sind als unvermeidbar anzusehen, wenn ein Betrag von 80 Euro nicht überschritten wird; höhere Übernachtungskosten sind im Einzelfall zu begründen."
+   },
+   {
+    "key": "overnight_preapproved_booking",
+    "corpus": "hessian-law-de",
+    "doc_id": "VVHE-VVHE000013868",
+    "quote": "Unabhängig davon werden Übernachtungskosten erstattet, wenn die Reisestelle sie bereits vor Reiseantritt als angemessen anerkannt oder die Zimmerreservierung selbst durchgeführt hat oder, wenn Dienstreisende ein Zimmer aus einem von der Reisestelle herausgegebenen Hotelverzeichnis buchen."
+   },
+   {
+    "key": "overnight_admin",
+    "corpus": "university-kassel-public-de",
+    "doc_id": "32bc169e-4d0b-4931-9b72-bf425ec7311b",
+    "quote": "Nachgewiesene Übernachtungskosten sind bis zu einer Höhe von 80,00 € je Nacht erstattungsfähig. Darüber hinaus gehende Übernachtungskosten werden nur erstattet, wenn sie unvermeidbar waren. D. h. die Notwendigkeit ist im Einzelfall nachvollziehbar schriftlich bei Antragsstellung zu begründen."
+   },
+   {
+    "key": "overnight_no_reason",
+    "corpus": "university-kassel-public-de",
+    "doc_id": "32bc169e-4d0b-4931-9b72-bf425ec7311b",
+    "quote": "Erfolgt keine Erklärung der Notwendigkeit, sind höchstens 80,00 € je Nacht erstattungsfähig!"
+   }
+  ],
+  "business_private_trip_combination": [
+   {
+    "key": "private_extension",
+    "corpus": "hessian-law-de",
+    "doc_id": "jlr-NNLHE0000518BNN00000000023",
+    "quote": "Werden Dienstreisen mit einem Urlaub von mehr als fünf Arbeitstagen verbunden, werden nur die zusätzlich für die Erledigung des Dienstgeschäfts entstehenden Kosten nach den §§ 5 und 6 erstattet; Tage- und Übernachtungsgeld werden für die Dauer des Dienstgeschäfts sowie für die zusätzliche Reisezeit gewährt."
+   },
+   {
+    "key": "private_notify",
+    "corpus": "hessian-law-de",
+    "doc_id": "VVHE-VVHE000013868",
+    "quote": "Wollen Bedienstete eine Dienstreise mit Urlaub verbinden, haben sie dies der für die Anordnung oder Genehmigung zuständigen Stelle vorher mitzuteilen."
+   }
+  ],
+  "cross_border_social_security_coverage": [
+   {
+    "key": "coverage_scope",
+    "corpus": "university-kassel-public-de",
+    "doc_id": "32bc169e-4d0b-4931-9b72-bf425ec7311b",
+    "quote": "Nach derzeitiger Rechtslage benötigen alle Beschäftigten sowie Beamtinnen und Beamte eine A1/E101-Bescheinigung, sobald sie auf dienstliche Veranlassung grenzüberschreitend innerhalb der EU, des EWR, der Schweiz oder in einem der Staaten, mit denen ein bilaterales Abkommen besteht tätig werden."
+   },
+   {
+    "key": "coverage_application",
+    "corpus": "university-kassel-public-de",
+    "doc_id": "32bc169e-4d0b-4931-9b72-bf425ec7311b",
+    "quote": "wird empfohlen, spätestens acht Wochen vor Beginn einer Auslandsdienstreise die Genehmigung der Reise über das bekannte ESS-System mit folgenden zwingend erforderlichen Angaben zu beantragen"
+   }
+  ],
+  "transport_costs": [
+   {
+    "key": "rail_lowest_class",
+    "corpus": "hessian-law-de",
+    "doc_id": "jlr-NNLHE0000518BNN00000000011",
+    "quote": "Die Fahrtkosten für regelmäßig verkehrende Land- und Wasserfahrzeuge werden bis zur Höhe der niedrigsten Beförderungsklasse erstattet"
+   },
+   {
+    "key": "rail_class_upgrade",
+    "corpus": "hessian-law-de",
+    "doc_id": "jlr-NNLHE0000518BNN00000000011",
+    "quote": "Die Kosten für Bahnfahrten können bis zur nächst höheren Klasse erstattet werden, wenn die Fahrtdauer der einfachen Strecke mehr als zwei Stunden beträgt oder sonstige triftige Gründe vorliegen."
+   },
+   {
+    "key": "flight_comparison",
+    "corpus": "university-kassel-public-de",
+    "doc_id": "32bc169e-4d0b-4931-9b72-bf425ec7311b",
+    "quote": "Bei Flugreisen ist dem Dienstreiseantrag ein Preisvergleich beizufügen. Daraus sollte hervorgehen, wie hoch die Kosten für einen Flug gewesen wären, wenn die Rückreise direkt nach Beendigung des Dienstgeschäftes angetreten würde."
+   }
+  ],
+  "third_party_funding": [
+   {
+    "key": "third_party_offset",
+    "corpus": "hessian-law-de",
+    "doc_id": "jlr-NNLHE0000518BNN00000000008",
+    "quote": "Leistungen, die Dienstreisende ihres Amtes wegen von dritter Seite für dieselbe Dienstreise erhalten, sind anzurechnen."
+   },
+   {
+    "key": "funder_rules",
+    "corpus": "university-kassel-public-de",
+    "doc_id": "ab40fc4f-638f-4898-b501-40fc33916ac4",
+    "quote": "Der Drittmittelgeber kann Abweichungen von der Anwendung der in der Universität Kassel üblichen Regelungen zulassen und eigene Erstattungsregelungen bestimmen."
+   }
+  ],
+  "expense_claim_submission": [
+   {
+    "key": "claim_deadline_statute",
+    "corpus": "hessian-law-de",
+    "doc_id": "jlr-NNLHE0000518BNN00000000008",
+    "quote": "Die Reisekostenerstattung ist innerhalb einer Ausschlussfrist von sechs Monaten bei der Festsetzungsstelle schriftlich oder elektronisch zu beantragen."
+   },
+   {
+    "key": "claim_deadline_admin",
+    "corpus": "university-kassel-public-de",
+    "doc_id": "32bc169e-4d0b-4931-9b72-bf425ec7311b",
+    "quote": "Reisekostenerstattungen sind innerhalb einer Frist von sechs Monaten nach Beendigung der Dienstreise zu beantragen. Maßgeblich ist das Eingangsdatum in der Reisekostensachbearbeitung. Ausnahmen hiervon sind nicht zulässig."
+   },
+   {
+    "key": "claim_deadline_forfeit",
+    "corpus": "university-kassel-public-de",
+    "doc_id": "32bc169e-4d0b-4931-9b72-bf425ec7311b",
+    "quote": "Für Reisekostenabrechnungen, die nach Ablauf dieser Frist eingereicht werden, kann keine Reisekostenerstattung mehr gewährt werden (Ausschlussfrist nach § 4 Abs. 5 HRKG / § 3 Abs. 1 BRKG)."
+   },
+   {
+    "key": "advance_settlement",
+    "corpus": "university-kassel-public-de",
+    "doc_id": "32bc169e-4d0b-4931-9b72-bf425ec7311b",
+    "quote": "Abschlagszahlungen sind innerhalb von vier Wochen nach dem Ende der Dienstreise durch Vorlage der Reisekostenabrechnung abzurechnen. Andernfalls sind die Abschläge zurückzuzahlen."
+   },
+   {
+    "key": "claim_countersigned",
+    "corpus": "university-kassel-public-de",
+    "doc_id": "32bc169e-4d0b-4931-9b72-bf425ec7311b",
+    "quote": "Sämtliche Reisekostenanträge müssen, bevor die Abrechnung erfolgen kann, durch die entsprechende vorgesetzte Stelle sachlich-richtig-gezeichnet werden. Andernfalls kann keine Abrechnung erfolgen."
+   }
+  ],
+  "accommodation_costs_abroad": [
+   {
+    "key": "abroad_statute",
+    "corpus": "hessian-law-de",
+    "doc_id": "jlr-NNLHE0000518BNN00000000026",
+    "quote": "Soweit nichts anderes bestimmt ist, richtet sich die Gewährung von Reisekosten für Auslandsdienstreisen nach der Auslandsreisekostenverordnung"
+   },
+   {
+    "key": "abroad_framework",
+    "corpus": "university-kassel-public-de",
+    "doc_id": "32bc169e-4d0b-4931-9b72-bf425ec7311b",
+    "quote": "Für Auslandsdienstreisen findet die Auslandsreisekostenverordnung (ARV) in Verbindung mit dem Bundesreisekostengesetz (BRKG) Anwendung."
+   },
+   {
+    "key": "abroad_overnight_proven",
+    "corpus": "university-kassel-public-de",
+    "doc_id": "32bc169e-4d0b-4931-9b72-bf425ec7311b",
+    "quote": "Nachgewiesene Übernachtungskosten werden bis zu einer Höhe des in der ARV ausgewiesenen Betrages für das jeweilige Land erstattet. Darüber hinaus gehende Übernachtungskosten werden nur erstattet, wenn sie unvermeidbar waren. D. h. die Notwendigkeit ist im Einzelfall nachvollziehbar schriftlich bei Antragsstellung zu begründen."
+   },
+   {
+    "key": "abroad_overnight_no_reason",
+    "corpus": "university-kassel-public-de",
+    "doc_id": "32bc169e-4d0b-4931-9b72-bf425ec7311b",
+    "quote": "Erfolgt keine Erklärung der Notwendigkeit, ist nur der jeweils geltende Satz je Nacht erstattungsfähig!"
+   },
+   {
+    "key": "abroad_overnight_flat",
+    "corpus": "university-kassel-public-de",
+    "doc_id": "32bc169e-4d0b-4931-9b72-bf425ec7311b",
+    "quote": "Ohne Nachweis wird auf Antrag für jede notwendige Übernachtung ein Übernachtungsgeld in Höhe von 50 % des in der ARV ausgewiesenen Betrages für das jeweilige Land, höchstens jedoch 30,00 € je Nacht erstattet."
+   }
+  ],
+  "invoice_formalities": [
+   {
+    "key": "invoice_receipts_required",
+    "corpus": "university-kassel-public-de",
+    "doc_id": "32bc169e-4d0b-4931-9b72-bf425ec7311b",
+    "quote": "Sämtliche entstandenen Reisekosten sind bei der Abrechnung durch entsprechende Belege nachzuweisen."
+   },
+   {
+    "key": "invoice_addressee",
+    "corpus": "university-kassel-public-de",
+    "doc_id": "32bc169e-4d0b-4931-9b72-bf425ec7311b",
+    "quote": "Rechnungen für Übernachtungskosten werden nur erstattet, sofern die Universität Kassel als Adressat angegeben ist."
+   },
+   {
+    "key": "invoice_lodging_only",
+    "corpus": "university-kassel-public-de",
+    "doc_id": "32bc169e-4d0b-4931-9b72-bf425ec7311b",
+    "quote": "Grundsätzlich finden nur die reinen Übernachtungskosten ohne sonstige Leistungen (z. B. ausgewiesene Verpflegungskosten wie Frühstück) Berücksichtigung."
+   },
+   {
+    "key": "invoice_receipts_on_request",
+    "corpus": "hessian-law-de",
+    "doc_id": "VVHE-VVHE000013868",
+    "quote": "Belege sind auf Verlangen der zuständigen Reisestelle vorzulegen. Ist eine Vorlage nicht möglich, kann für den Nachweis der Auslagen die pflichtgemäße Versicherung der Dienstreisenden in der Reisekostenrechnung durch die zuständige Reisestelle anerkannt werden."
+   },
+   {
+    "key": "invoice_hospitality_addressee",
+    "corpus": "university-kassel-public-de",
+    "doc_id": "74ae8556-feb0-4b84-a70e-9566acb8360b",
+    "quote": "auf den Rechnungsempfänger (Universität Kassel) ausgestellt sein"
+   }
+  ],
+  "event_side_program_costs": [
+   {
+    "key": "side_programme_excluded",
+    "corpus": "university-kassel-public-de",
+    "doc_id": "74ae8556-feb0-4b84-a70e-9566acb8360b",
+    "quote": "Rahmenprogramme, Finanzierung ggf. über Teilnahmegebühren möglich"
+   },
+   {
+    "key": "conference_meals_flat",
+    "corpus": "university-kassel-public-de",
+    "doc_id": "32bc169e-4d0b-4931-9b72-bf425ec7311b",
+    "quote": "Die auf den Rechnungen ausgewiesenen Verpflegungskosten für Mittag- uns Abendverpflegung werden im Rahmen von Reisekosten nur dann erstattet, wenn es sich nachweislich um eine notwendige Pauschale handelt (Tagungspauschale etc.). Ggf. sind der Reisekostenabrechnung entsprechende Nachweise beizufügen. In allen übrigen Fällen sind die Verpflegungskosten über das Tagegeld abgegolten."
+   }
+  ]
+ }
+}
