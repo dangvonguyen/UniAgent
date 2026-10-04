@@ -11,6 +11,12 @@ RUN apt-get update \
 COPY requirements.txt /app/requirements.txt
 RUN pip3 install --no-cache-dir --requirement /app/requirements.txt
 
+# Download the Terrier jars at build time; the TIRA sandbox has no network access.
+ENV PYTERRIER_HOME=/opt/pyterrier
+RUN python3 -c "import pyterrier as pt; pt.java.init()" \
+    && chmod -R a+rX /opt/pyterrier
+ENV PYTERRIER_OFFLINE=1
+
 COPY resources /app/resources
 COPY src /app/src
 COPY predict.py /app/

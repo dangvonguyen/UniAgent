@@ -4,6 +4,7 @@ import asyncio
 import gzip
 import hashlib
 import json
+import os
 import shutil
 import threading
 import time
@@ -24,6 +25,10 @@ from .config import (
     RETRIEVAL_WMODEL,
 )
 from .passages import Passage, normalize_text, split_into_passages
+
+# The TIRA sandbox has no network access, so use the Terrier jars cached at image build time.
+if os.environ.get("PYTERRIER_OFFLINE"):
+    pt.java.mavenresolver.offline()
 
 
 class LanguageConfig(TypedDict):
