@@ -11,7 +11,9 @@ RUN apt-get update \
 COPY requirements.txt /app/requirements.txt
 RUN pip3 install --no-cache-dir --requirement /app/requirements.txt
 
-COPY resources src predict.py /app/
+COPY resources /app/resources
+COPY src /app/src
+COPY predict.py /app/
 RUN chmod +x /app/predict.py
 
 ENTRYPOINT ["/app/predict.py"]
