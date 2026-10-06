@@ -1,5 +1,4 @@
 import asyncio
-import json
 import re
 import time
 from typing import TypeVar
@@ -12,9 +11,12 @@ from pydantic import BaseModel, ValidationError
 from .config import (
     LLM_COMPLETION_ATTEMPTS,
     LLM_MAX_CONCURRENCY,
+    LLM_REASONING_EFFORT,
     LLM_TEMPERATURE,
     LLM_TIMEOUT_SECONDS,
+    LLM_TOP_P,
 )
+from .text import normalize_text
 from .tracelog import Trace
 
 M = TypeVar("M", bound=BaseModel)
@@ -22,7 +24,7 @@ M = TypeVar("M", bound=BaseModel)
 
 def verified(quote: str | None, source: str) -> bool:
     """A Verified Quote is a non-empty verbatim excerpt of its source (whitespace-insensitive)."""
-    normalize = lambda text: re.sub(r"\s+", " ", text or "").strip().lower()
+    normalize = lambda text: re.sub(r"\s+", " ", normalize_text(text or "")).strip().lower()
     return bool(normalize(quote)) and normalize(quote) in normalize(source)
 
 
@@ -73,10 +75,7 @@ class LLM:
     ) -> M:
         messages: ResponseInputParam = [
             {"role": "system", "content": system},
-            {
-                "role": "user",
-                "content": f"{user}\n\nJSON schema of the answer:\n{json.dumps(schema.model_json_schema(), ensure_ascii=False)}",
-            },
+            {"role": "user", "content": user},
         ]
         last_error: str | None = None
 
@@ -89,6 +88,8 @@ class LLM:
                     model=self._model,
                     input=messages,
                     temperature=LLM_TEMPERATURE,
+                    top_p=LLM_TOP_P,
+                    reasoning={"effort": LLM_REASONING_EFFORT},
                     max_output_tokens=self._max_tokens,
                 )
             except Exception as err:  # noqa: BLE001
@@ -118,9 +119,10 @@ class LLM:
             )
             usage = response.usage.model_dump() if response.usage else None
             try:
-                payload = json_repair.loads(content)
+                cleaned = re.sub(r"^```(?:json)?\s*|\s*```$", "", content.strip())
+                payload = json_repair.loads(cleaned)
                 if not isinstance(payload, dict) or not payload:
-                    raise ValueError(f"no JSON object in model output: {content!r}")
+                    raise ValueError(f"no JSON object in model output: {cleaned!r}")
                 answer = schema.model_validate(payload)
             except (ValidationError, ValueError) as err:
                 last_error = str(err)

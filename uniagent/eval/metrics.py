@@ -4,7 +4,7 @@ from collections.abc import Collection, Sequence
 from dataclasses import dataclass
 
 from src.retrieval import FusedHit
-from src.retrieval.passages import normalize_text
+from src.text import normalize_text
 
 from .gold import GoldQuote
 

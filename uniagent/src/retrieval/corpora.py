@@ -12,9 +12,10 @@ from pathlib import Path
 from typing import Any, NamedTuple
 
 from src.config import PASSAGE_CACHE_DIR
+from src.text import normalize_text
 
 from .languages import infer_language
-from .passages import Passage, normalize_text, split_into_passages
+from .passages import Passage, split_into_passages
 
 Document = dict[str, Any]
 
@@ -24,6 +25,7 @@ _PASSAGE_CACHE_SOURCES = [
     Path(__file__).parent / "languages.py",
     Path(__file__).parent / "passages.py",
     Path(__file__).parent.parent / "config.py",
+    Path(__file__).parent.parent / "text.py",
 ]
 
 
@@ -162,7 +164,12 @@ def _prepare_corpus(corpus_name: str, documents_path: Path) -> PreparedCorpus:
         passage.passage_id: passage
         for doc in documents
         for passage in split_into_passages(
-            corpus_name, doc["doc_id"], doc["title"], doc["content"], language
+            corpus_name,
+            doc["doc_id"],
+            doc["title"],
+            doc["content"],
+            language,
+            normalize=True,
         )
     }
     return PreparedCorpus(passages, language)

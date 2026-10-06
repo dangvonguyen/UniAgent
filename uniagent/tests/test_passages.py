@@ -5,7 +5,8 @@ import re
 import pytest
 
 from src.config import PASSAGE_MAX_CHARS, PASSAGE_TAIL_MIN_CHARS, PASSAGE_TARGET_CHARS
-from src.passages import normalize_text, split_into_passages
+from src.retrieval.passages import split_into_passages
+from src.text import normalize_text
 
 FILLER = (
     "Die Hochschule informiert ihre Mitglieder regelmäßig über organisatorische "

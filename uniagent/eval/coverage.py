@@ -8,7 +8,7 @@ from src.config import DIGEST_CONTEXT_K, DIGEST_MAX_DOC_CHARS
 from src.models import Rule
 from src.retrieval import FusedHit
 from src.retrieval.corpora import PreparedCorpus, read_documents
-from src.retrieval.passages import normalize_text
+from src.text import normalize_text
 
 from .gold import Gold, GoldQuote
 from .metrics import QuoteResult, locate_quote, squash
