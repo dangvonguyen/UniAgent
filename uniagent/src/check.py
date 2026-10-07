@@ -13,9 +13,18 @@ SYSTEM = (
     "quotes that define it (E1, E2, ...) and the case documents (C1, C2, ...). Apply the "
     "rule exactly as the quoted policy states it, including all exceptions and "
     "justification conditions. Case documents only establish facts; they are never a "
-    "source of the rule. Verdicts: pass (rule satisfied), fail (rule violated, supported "
-    "by verbatim quotes from the case documents in their original language), "
-    "not_applicable (rule does not concern this case), unknown (cannot be decided)."
+    "source of the rule. Determine which administrative action these documents "
+    "request and what stage the application is in. Before deciding a violation, "
+    "identify the condition that triggers the requirement and the event by which "
+    "compliance is due. A pending request before a future deadline is not itself "
+    "proof of violating that deadline. Do not require evidence of a later approval, "
+    "purchase, trip, or reimbursement claim during an earlier application stage, "
+    "unless the cited policy expressly requires it now. Do require evidence that "
+    "the policy mandates at this submission stage. Distinguish a documented cost "
+    "from a no-receipt allowance and a requested estimate from an actual claim. "
+    "Verdicts: pass (applicable and satisfied), fail (applicable and already due "
+    "but violated, supported by verbatim case quotes), not_applicable (not "
+    "triggered or not yet due at this stage), unknown (genuinely cannot decide)."
 )
 
 
@@ -29,6 +38,37 @@ class CheckAnswer(BaseModel):
     reason: str = ""
     case_quotes: list[CheckQuote] = []
     policy_refs: list[str] = []
+
+
+def finalize_answer(case: Case, resolved: ResolvedRule,
+                    answer: CheckAnswer) -> tuple[RuleVerdict, list[dict[str, str]]]:
+    """Deterministic citation validation; also used by offline replay."""
+    documents = {f"C{i}": doc for i, doc in enumerate(case.documents, 1)}
+    policy = {f"E{i}": quote for i, quote in enumerate(resolved.quotes, 1)}
+    issues: list[dict[str, str]] = []
+    case_quotes = []
+    for item in answer.case_quotes:
+        document = documents.get(item.doc)
+        if document is None:
+            issues.append({"kind": "invalid_case_document", "source": item.doc})
+        elif not verified(item.quote, document.text):
+            issues.append({"kind": "case_quote_not_found", "source": item.doc})
+        else:
+            case_quotes.append(CaseQuote(document=document.name, quote=item.quote))
+    policy_quotes = []
+    for ref in answer.policy_refs:
+        if ref in policy:
+            policy_quotes.append(policy[ref])
+        else:
+            issues.append({"kind": "invalid_policy_reference", "source": ref})
+    verdict = answer.verdict
+    reason = answer.reason
+    if verdict == "fail" and not case_quotes:
+        issues.append({"kind": "fail_without_verified_case_quote", "source": ""})
+        verdict = "unknown"
+        reason += " [Model proposed fail; no case excerpt passed source validation.]"
+    return RuleVerdict(rule_id=resolved.rule.id, verdict=verdict, reason=reason,
+                       case_quotes=case_quotes, policy_quotes=policy_quotes), issues
 
 
 def load_case(case_dir: Path) -> Case:
@@ -72,6 +112,9 @@ async def _check_rule(
         },
     )
     if not policy:
+        trace.log("citation_audit", output={"rule_id": rule.id,
+                    "model_verdict": None, "final_verdict": "unknown",
+                    "issues": [{"kind": "no_policy_quote", "source": ""}]})
         return RuleVerdict(
             rule_id=rule.id, verdict="unknown", reason="No policy found in the corpus."
         )
@@ -89,22 +132,15 @@ async def _check_rule(
         )
     except Exception as error:  # noqa: BLE001
         trace.log("error", status="error", error=str(error))
+        trace.log("citation_audit", output={"rule_id": rule.id,
+                    "model_verdict": None, "final_verdict": "unknown",
+                    "issues": [{"kind": "model_error", "source": str(error)[:150]}]})
         return RuleVerdict(
             rule_id=rule.id, verdict="unknown", reason=f"LLM error: {error}"
         )
 
-    case_quotes = [
-        CaseQuote(document=documents[q.doc].name, quote=q.quote)
-        for q in answer.case_quotes
-        if q.doc in documents and verified(q.quote, documents[q.doc].text)
-    ]
-    verdict = answer.verdict
-    if verdict == "fail" and not case_quotes:
-        verdict = "unknown"
-    return RuleVerdict(
-        rule_id=rule.id,
-        verdict=verdict,
-        reason=answer.reason,
-        case_quotes=case_quotes,
-        policy_quotes=[policy[ref] for ref in answer.policy_refs if ref in policy],
-    )
+    verdict, issues = finalize_answer(case, resolved, answer)
+    trace.log("citation_audit", output={"rule_id": rule.id,
+                "model_verdict": answer.verdict, "final_verdict": verdict.verdict,
+                "issues": issues})
+    return verdict

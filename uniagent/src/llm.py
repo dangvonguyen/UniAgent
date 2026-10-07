@@ -1,5 +1,6 @@
 import asyncio
 import json
+import os
 import re
 import time
 from typing import TypeVar
@@ -23,7 +24,14 @@ M = TypeVar("M", bound=BaseModel)
 def verified(quote: str | None, source: str) -> bool:
     """A Verified Quote is a non-empty verbatim excerpt of its source (whitespace-insensitive)."""
     normalize = lambda text: re.sub(r"\s+", " ", text or "").strip().lower()
-    return bool(normalize(quote)) and normalize(quote) in normalize(source)
+    excerpt = (quote or "").strip()
+    # Models often put typographic delimiters around an otherwise verbatim
+    # citation. A PDF need not contain the delimiters; its cited words must.
+    for opening, closing in (("\"", "\""), ("“", "”"), ("„", "“"), ("'", "'")):
+        if len(excerpt) >= 2 and excerpt.startswith(opening) and excerpt.endswith(closing):
+            excerpt = excerpt[len(opening):-len(closing)].strip()
+            break
+    return bool(normalize(excerpt)) and normalize(excerpt) in normalize(source)
 
 
 def _answer_text(response: Response) -> str:
@@ -79,18 +87,41 @@ class LLM:
             },
         ]
         last_error: str | None = None
+        api_mode = os.environ.get("UNIAGENT_API_MODE", "responses").strip().lower()
+        if api_mode not in {"responses", "chat_completions"}:
+            raise ValueError("UNIAGENT_API_MODE must be responses or chat_completions")
 
         for attempt in range(LLM_COMPLETION_ATTEMPTS):
             log_input = {"context": context, "attempt": attempt, "messages": messages}
             start = time.perf_counter()
 
             try:
-                response = await self._client.responses.create(
-                    model=self._model,
-                    input=messages,
-                    temperature=LLM_TEMPERATURE,
-                    max_output_tokens=self._max_tokens,
-                )
+                if api_mode == "chat_completions":
+                    request = dict(model=self._model, messages=messages,
+                                   temperature=LLM_TEMPERATURE, max_tokens=self._max_tokens)
+                    effort = os.environ.get("UNIAGENT_REASONING_EFFORT", "").strip()
+                    if effort:
+                        request["reasoning_effort"] = effort
+                    response = await self._client.chat.completions.create(**request)
+                    if not response.choices:
+                        raise ValueError("Chat API returned no choices")
+                    choice = response.choices[0]
+                    content = choice.message.content or ""
+                    reasoning = getattr(choice.message, "reasoning_content", None)
+                    finish_reason = choice.finish_reason
+                else:
+                    response = await self._client.responses.create(
+                        model=self._model, input=messages,
+                        temperature=LLM_TEMPERATURE, max_output_tokens=self._max_tokens,
+                    )
+                    content = _answer_text(response)
+                    reasoning = (
+                        "\n\n".join(
+                            part.text for item in response.output if item.type == "reasoning"
+                            for part in (item.content or item.summary)
+                        ) or None
+                    )
+                    finish_reason = getattr(response, "status", None)
             except Exception as err:  # noqa: BLE001
                 last_error = str(err)
                 _log(
@@ -106,16 +137,6 @@ class LLM:
                 )
                 continue
 
-            content = _answer_text(response)
-            reasoning = (
-                "\n\n".join(
-                    part.text
-                    for item in response.output
-                    if item.type == "reasoning"
-                    for part in (item.content or item.summary)
-                )
-                or None
-            )
             usage = response.usage.model_dump() if response.usage else None
             try:
                 payload = json_repair.loads(content)
@@ -137,6 +158,8 @@ class LLM:
                         "content": content,
                         "reasoning": reasoning,
                         "usage": usage,
+                        "finish_reason": finish_reason,
+                        "elapsed_seconds": time.perf_counter() - start,
                     },
                     status="error",
                     error=last_error,
@@ -157,6 +180,8 @@ class LLM:
                         "content": answer.model_dump(),
                         "reasoning": reasoning,
                         "usage": usage,
+                        "finish_reason": finish_reason,
+                        "elapsed_seconds": time.perf_counter() - start,
                     },
                 )
                 return answer
