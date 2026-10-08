@@ -12,7 +12,7 @@ from src.digest import build_digest
 from src.llm import LLM
 from src.models import Decision, ResolvedRule, RuleVerdict
 from src.retrieval import build_index
-from src.rules import RULES
+from src.rules import RULES, TOPICS, CaseType, case_type_for
 from src.tracelog import Trace
 
 
@@ -61,7 +61,7 @@ def _decision_evidence(verdicts: list[RuleVerdict]) -> list[dict[str, Any]]:
 
 
 async def decide_case(
-    case_dir: Path, rules: list[ResolvedRule], llm: LLM, trace: Trace
+    case_dir: Path, rules: list[ResolvedRule], topic: str, llm: LLM, trace: Trace
 ) -> dict[str, Any]:
     with trace.case(case_dir.name):
         try:
@@ -72,7 +72,7 @@ async def decide_case(
             raise
         trace.log("input", output={"documents": [d.name for d in case.documents]})
 
-        verdicts = await check_case(case, rules, llm, trace)
+        verdicts = await check_case(case, rules, topic, llm, trace)
         failed = any(v.verdict == "fail" for v in verdicts)
         decision = Decision(
             case_id=case.case_id,
@@ -109,6 +109,9 @@ async def main() -> None:
         Trace(trace_path, settings.openai_model) as trace,
         predictions_path.open("w", encoding="utf-8") as predictions,
     ):
+        cases = case_dirs(input_root)
+        case_types = list({case_type_for(case_dir.name) for case_dir in cases})
+
         # Phase 1: build the retrieval index over the mounted corpora.
         index = await build_index(corpora_root)
 
@@ -120,16 +123,24 @@ async def main() -> None:
             trace,
         )
 
-        # Phase 2: resolve every rule's policy quotes once, shared across all cases.
-        # Each rule traces under its own case_id.
-        rules = await build_digest(RULES, index, llm, trace)
+        # Phase 2: resolve the policy quotes of every rule of the domains, shared across
+        # all cases. Each rule traces under its own case_id.
+        resolved = await asyncio.gather(
+            *(
+                build_digest(RULES[case_type], TOPICS[case_type], index, llm, trace)
+                for case_type in case_types
+            )
+        )
+        rules: dict[CaseType, list[ResolvedRule]] = dict(zip(case_types, resolved))
 
-        # Phase 3: decide each case against the resolved rule digest, concurrently.
-        cases = case_dirs(input_root)
+        # Phase 3: decide each case against its domain's resolved rules, concurrently.
         print(f"Deciding {len(cases)} case(s)...", flush=True)
 
         async def _decide_indexed(i: int, case_dir: Path) -> tuple[int, dict[str, Any]]:
-            return i, await decide_case(case_dir, rules, llm, trace)
+            case_type = case_type_for(case_dir.name)
+            return i, await decide_case(
+                case_dir, rules[case_type], TOPICS[case_type], llm, trace
+            )
 
         tasks = [
             asyncio.create_task(_decide_indexed(i, case_dir))
