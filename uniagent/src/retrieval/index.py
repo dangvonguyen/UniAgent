@@ -41,6 +41,9 @@ class CorpusIndex:
     def corpora(self) -> list[str]:
         return list(self._lexical.retrievers)
 
+    def language(self, corpus: str) -> str:
+        return self._lexical.retrievers[corpus].language
+
     @classmethod
     async def build(cls, corpora: dict[str, PreparedCorpus]) -> CorpusIndex:
         print("Building corpus indexes...")

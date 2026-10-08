@@ -17,10 +17,7 @@ from __future__ import annotations
 
 from collections.abc import Callable
 from dataclasses import dataclass
-from functools import cache
 from typing import NamedTuple
-
-import pysbd
 
 from src.config import (
     PASSAGE_MAX_CHARS,
@@ -28,7 +25,7 @@ from src.config import (
     PASSAGE_TAIL_MIN_CHARS,
     PASSAGE_TARGET_CHARS,
 )
-from src.text import normalize_text
+from src.text import ends_with_sentence_mark, normalize_text, sentence_spans
 
 
 class Span(NamedTuple):
@@ -43,12 +40,6 @@ class Span(NamedTuple):
 
 
 SpanGroup = list[Span]  # neighbouring spans that will become one passage
-
-# --- Sentence rules --------------------------------------------------------
-
-_SENTENCE_END_MARKS = ".!?…"
-_CLOSING_QUOTES_AND_BRACKETS = "\"'”“»«)]"  # may follow an end mark: `He said "stop."`
-_OPENING_QUOTES_AND_BRACKETS = "\"'„“«»(["  # non-letters that can start a sentence
 
 
 @dataclass(frozen=True)
@@ -142,54 +133,12 @@ def _split_at_separator(body: str, span: Span, separator: str) -> list[Span]:
     return [piece for piece in pieces if piece.length > 0]
 
 
-@cache
-def _get_sentence_segmenter(language: str) -> pysbd.Segmenter:
-    return pysbd.Segmenter(language=language, clean=False)
-
-
 def _split_into_sentences(body: str, span: Span, language: str) -> list[Span]:
-    """Split a span into sentences using pysbd, then repair its false breaks."""
-    chunk = body[span.start : span.end]
-    sentences: list[Span] = []
-    search_start = 0  # where to look for the next sentence inside `chunk`
-
-    for raw_sentence in _get_sentence_segmenter(language).segment(chunk):
-        sentence_text = raw_sentence.strip()
-        if not sentence_text:
-            continue
-
-        sentence_offset = chunk.find(sentence_text, search_start)
-        if sentence_offset == -1:  # pysbd changed the text -> can't trust its pieces
-            return [span]
-        search_start = sentence_offset + len(sentence_text)
-        this_sentence = Span(span.start + sentence_offset, span.start + search_start)
-
-        # pysbd also breaks after abbreviations ("gem.", "Abs."). Keep a break
-        # only if the previous piece ends a sentence and this one starts one.
-        if sentences and not _is_real_sentence_break(
-            body, sentences[-1], this_sentence
-        ):
-            sentences[-1] = _join_spans(sentences[-1], this_sentence)
-        else:
-            sentences.append(this_sentence)
-    return sentences
-
-
-def _is_real_sentence_break(
-    body: str, previous_sentence: Span, next_sentence: Span
-) -> bool:
-    return _ends_with_sentence_mark(body, previous_sentence) and _can_start_sentence(
-        body[next_sentence.start]
-    )
-
-
-def _ends_with_sentence_mark(body: str, span: Span) -> bool:
-    text = body[span.start : span.end].rstrip(_CLOSING_QUOTES_AND_BRACKETS)
-    return bool(text) and text[-1] in _SENTENCE_END_MARKS
-
-
-def _can_start_sentence(char: str) -> bool:
-    return char.isupper() or char in _OPENING_QUOTES_AND_BRACKETS
+    """Split a span into sentences (pysbd, with its false breaks repaired)."""
+    sentences = sentence_spans(body[span.start : span.end], language)
+    if sentences is None:
+        return [span]
+    return [Span(span.start + start, span.start + end) for start, end in sentences]
 
 
 # ---------------------------------------------------------------------------
@@ -235,7 +184,7 @@ def _is_fragment(body: str, block: Span) -> bool:
     """A block that is too short, or stops mid-sentence, belongs with what follows."""
     return (
         block.length < PASSAGE_MIN_STANDALONE_BLOCK_CHARS
-        or not _ends_with_sentence_mark(body, block)
+        or not ends_with_sentence_mark(body[block.start : block.end])
     )
 
 

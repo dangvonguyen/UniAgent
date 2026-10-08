@@ -10,6 +10,7 @@ dependencies = [
     "pydantic>=2.13.5",
     "pysbd>=0.3.4",
     "pyterrier[all]>=1.1.2",
+    "rapidfuzz>=3.14.6",
     "sentence-transformers>=6.1.0",
     "tira>=0.0.205",
 ]

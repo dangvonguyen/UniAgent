@@ -6,7 +6,7 @@ from pathlib import Path
 
 from pydantic import BaseModel
 
-from .llm import LLM, verified
+from .llm import LLM
 from .models import (
     Case,
     CaseDocument,
@@ -16,6 +16,7 @@ from .models import (
     RuleVerdict,
     Verdict,
 )
+from .quotes import match_case_quote
 from .text import normalize_chars
 from .tracelog import Trace
 
@@ -216,13 +217,14 @@ def _verified_case_quotes(
     seen: set[tuple[str, str]] = set()
     for quote in quotes:
         doc = _resolve_document(quote.source, documents)
-        if doc is None or not verified(quote.quote, doc.text):
+        text = match_case_quote(quote.quote, doc.text) if doc else None
+        if text is None:
             continue
-        key = (doc.name, quote.quote)
+        key = (doc.name, text)
         if key in seen:
             continue
         seen.add(key)
-        verified_quotes.append(CaseQuote(document=doc.name, quote=quote.quote))
+        verified_quotes.append(CaseQuote(document=doc.name, quote=text))
     return verified_quotes
 
 

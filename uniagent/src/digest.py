@@ -7,8 +7,9 @@ from html import escape
 from pydantic import BaseModel
 
 from .config import DIGEST_CONTEXT_K, RETRIEVAL_DEPTH
-from .llm import LLM, verified
+from .llm import LLM
 from .models import PolicyQuote, ResolvedRule, Rule
+from .quotes import match_policy_quote
 from .retrieval import CorpusIndex, FusedHit
 from .tracelog import Trace
 
@@ -100,7 +101,7 @@ async def _resolve_rule(
     try:
         docs = await _retrieve(rule, index, trace)
         if docs:
-            quotes = await _extract_quotes(rule, topic, docs, llm, trace)
+            quotes = await _extract_quotes(rule, topic, docs, index, llm, trace)
     except Exception as error:  # noqa: BLE001
         trace.log("error", status="error", error=str(error))
         print(f"Rule {rule.id} failed")
@@ -142,7 +143,12 @@ async def _retrieve(rule: Rule, index: CorpusIndex, trace: Trace) -> LabeledHits
 
 
 async def _extract_quotes(
-    rule: Rule, topic: str, docs: LabeledHits, llm: LLM, trace: Trace
+    rule: Rule,
+    topic: str,
+    docs: LabeledHits,
+    index: CorpusIndex,
+    llm: LLM,
+    trace: Trace,
 ) -> list[PolicyQuote]:
     user = _build_user_message(rule, topic, docs)
     answer = await llm.complete_json(
@@ -155,12 +161,20 @@ async def _extract_quotes(
 
     for quote in answer.quotes:
         hit = docs.get(quote.source)
-        if hit is None or not verified(quote.text, hit.passage.text):
+        # Keep the passage's own text, so a misquote never reaches the case check.
+        text = (
+            match_policy_quote(
+                quote.text, hit.passage.text, index.language(hit.passage.corpus)
+            )
+            if hit
+            else None
+        )
+        if text is None:
             rejected.append({"source": quote.source, "text": quote.text})
             continue
 
         passage = hit.passage
-        key = (passage.corpus, passage.doc_id, quote.text)
+        key = (passage.corpus, passage.doc_id, text)
         if key in seen:
             continue
         seen.add(key)
@@ -168,7 +182,7 @@ async def _extract_quotes(
             PolicyQuote(
                 corpus=passage.corpus,
                 doc_id=passage.doc_id,
-                quote=quote.text,
+                quote=text,
             )
         )
 

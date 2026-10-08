@@ -29,6 +29,12 @@ LLM_TOP_P = 1.0
 LLM_REASONING_EFFORT = "medium"
 LLM_MAX_CONCURRENCY = 8
 
+# quote matching
+QUOTE_MATCH_MIN_SCORE = 90  # rapidfuzz partial_ratio, 0-100
+QUOTE_MATCH_MIN_CHARS = 30  # shorter quotes must match exactly
+QUOTE_MATCH_MIN_RUN = 5  # equal-character run that anchors a fuzzy match's ends
+QUOTE_MAX_WIDEN_CHARS = 300  # max growth per side when widening a quote to sentences
+
 # digest
 DIGEST_CONTEXT_K = 10  # excerpts handed to the LLM when resolving one rule
 DIGEST_MAX_DOC_CHARS = 3000

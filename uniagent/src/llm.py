@@ -16,16 +16,9 @@ from .config import (
     LLM_TIMEOUT_SECONDS,
     LLM_TOP_P,
 )
-from .text import normalize_text
 from .tracelog import Trace
 
 M = TypeVar("M", bound=BaseModel)
-
-
-def verified(quote: str | None, source: str) -> bool:
-    """A Verified Quote is a non-empty verbatim excerpt of its source (whitespace-insensitive)."""
-    normalize = lambda text: re.sub(r"\s+", " ", normalize_text(text or "")).strip().lower()
-    return bool(normalize(quote)) and normalize(quote) in normalize(source)
 
 
 def _answer_text(response: Response) -> str:
