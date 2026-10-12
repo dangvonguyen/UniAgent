@@ -1,0 +1,130 @@
+{
+  "method": "live GPT diagnostic of installed gate, saved policy packets",
+  "model": "gpt-oss-20b",
+  "source_sha256": {
+    "predict.py": "bac31481e7f7f92b8a0e758c80b162ac323e1581fcfcef8163243d29ed9666ac",
+    "src/check.py": "8a2b12b363e2a23f6bff2b632db89e478c3e940b926fb863dad8fc5a488ada20",
+    "src/config.py": "ea46376091282f7943641727e22db4627700b9e51de1796720aacc99aaca6947",
+    "src/procurement_audit.py": "062ba78e4deb7d8de1518cc661400ad1cdccbfebbdadf23cf7e26460ad02ef25",
+    "src/procurement_decision.py": "55ad4f8a8870d2858096036e3b443abf86230221dcd247f55cf2a2c71d612d91",
+    "src/procurement_scope_gate.py": "60d846cfc3c6d31fc3f867b6d1b995194b4ad145daa7ed76722f56e39cdf4966",
+    "src/procurement_evidence.py": "687f926229fa616be4783181a9c90eeed3f3d7359def94471b7b5b0d84621083",
+    "src/rules/procurement.py": "87e2e8cfaf0b2431c6703f2a07870a4cbb7edbbe5e5520de1a9070abb994dd8f",
+    "src/rules/procurement_comparison_offers.py": "51f9b95b4015b1b4b39cf9eb6aed98ba8de7c6a0567daab39ccbcb6c3ee3426b",
+    "src/rules/procurement_amount_calculation.py": "505ddd3cdae1431673b74bd29c902e7b0ba815a4d9d0665247c9c28edb7614ab",
+    "src/rules/procurement_document_consistency.py": "04eb5af17fb3c073b4ae37d1cc158e228b156608fa263a1c39042b8af4ad3b14",
+    "src/rules/procurement_award_selection.py": "6eb85494eee2c5cd3f7c9ca8fe10818167b4a54a8dd66d5d81113c48c237dbce",
+    "src/quotes.py": "cf90f578e5fe06bdb2edcca6fa9fbf39bb3f02d2787097fe71a93084628a2438"
+  },
+  "saved_policy_trace": "/pilot-project/runs/procurement/matrix-eight-five-20261010-133644-746/run-trace.jsonl.log.gz",
+  "limits": {
+    "requests": 8,
+    "seconds_per_case": 120,
+    "max_output_tokens_per_request": 3000
+  },
+  "targets": [
+    [
+      "beschaffungsantrag-03",
+      "framework_contract_sourcing"
+    ],
+    [
+      "beschaffungsantrag-03",
+      "comparison_offers"
+    ],
+    [
+      "beschaffungsantrag-05",
+      "framework_contract_sourcing"
+    ],
+    [
+      "beschaffungsantrag-06",
+      "comparison_offers"
+    ],
+    [
+      "beschaffungsantrag-08",
+      "framework_contract_sourcing"
+    ],
+    [
+      "beschaffungsantrag-08",
+      "comparison_offers"
+    ]
+  ],
+  "results": [
+    {
+      "case_id": "beschaffungsantrag-03",
+      "rule_id": "framework_contract_sourcing",
+      "verdict": "unknown",
+      "reason": "rule_error: ordering-duty-not-shown-due-at-request-stage",
+      "verified_policy_quotes": [],
+      "verified_case_quotes": [],
+      "elapsed_seconds": 71.02,
+      "requests_used_cumulative": 2
+    },
+    {
+      "case_id": "beschaffungsantrag-03",
+      "rule_id": "comparison_offers",
+      "verdict": "unknown",
+      "reason": "rule_error: item-text-not-in-case:E2",
+      "verified_policy_quotes": [],
+      "verified_case_quotes": [],
+      "elapsed_seconds": 32.88,
+      "requests_used_cumulative": 4
+    },
+    {
+      "case_id": "beschaffungsantrag-05",
+      "rule_id": "framework_contract_sourcing",
+      "verdict": "unknown",
+      "reason": "LLM error: modal-http: internal error: status Failure: ServerDisconnectedError('Server disconnected')",
+      "verified_policy_quotes": [],
+      "verified_case_quotes": [],
+      "elapsed_seconds": 45.64,
+      "requests_used_cumulative": 6
+    },
+    {
+      "case_id": "beschaffungsantrag-06",
+      "rule_id": "comparison_offers",
+      "verdict": "fail",
+      "reason": "The procurement request for an analysizwaage and an ultraschallbad requires at least three independent offers; only two offers are supplied, with no framework partner exception stated.",
+      "verified_policy_quotes": [
+        {
+          "corpus": "university-kassel-public-de",
+          "doc_id": "4bea4f9c-217e-42a8-afd3-beccd578adef",
+          "quote": "Man muss bereits während der Bestellung die Zuordnung eingeben. Grundsätzlich müssen 3 Angebote eingeholt werden, Ausnahme bei Rahmenvertragspartnern. Rahmenvertragspartner sind Lieferfirmen, bei denen die vertraglich vereinbarten Produkte gekauft werden müssen. Sollte man ein Produkt bestellen wollen, zu dem ein Rahmenvertrag besteht, muss man dieses Produkt ausschließlich beim Rahmenvertragspartner bestellen"
+        }
+      ],
+      "verified_case_quotes": [
+        {
+          "document": "beschaffungsantrag.pdf",
+          "quote": "Eingeholte Angebote 2\nVorgesehener Lieferant Waagenbau Iffländer GmbH, Augsburg (Angebot IW-6620"
+        },
+        {
+          "document": "vergabevermerk.pdf",
+          "quote": "Eingegangene Angebote\nBieter Angebot vom netto brutto Rang\nWaagenbau Iffländer GmbH IW-6620 15.06.2027 2.670,00 € 3.177,30 € 1\nLaborbedarf Sendelbach OHG S-27-1187 17.06.2027 2.765,00 € 3.290,35 € 2"
+        }
+      ],
+      "elapsed_seconds": 18.03,
+      "requests_used_cumulative": 7
+    },
+    {
+      "case_id": "beschaffungsantrag-08",
+      "rule_id": "framework_contract_sourcing",
+      "verdict": "unknown",
+      "reason": "LLM error: modal-http: internal error: status Failure: ServerDisconnectedError('Server disconnected')",
+      "verified_policy_quotes": [],
+      "verified_case_quotes": [],
+      "elapsed_seconds": 15.85,
+      "requests_used_cumulative": 8
+    },
+    {
+      "case_id": "beschaffungsantrag-08",
+      "rule_id": "comparison_offers",
+      "verdict": "unknown",
+      "reason": "LLM error: final_probe_request_budget_exhausted",
+      "verified_policy_quotes": [],
+      "verified_case_quotes": [],
+      "elapsed_seconds": 0.29,
+      "requests_used_cumulative": 8
+    }
+  ],
+  "requests_used": 8,
+  "elapsed_seconds": 183.89
+}

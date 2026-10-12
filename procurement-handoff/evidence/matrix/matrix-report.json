@@ -1,0 +1,829 @@
+{
+  "method": "five-rule live matrix, saved policy digest; no ground truth in prompts",
+  "model": "gpt-oss-20b",
+  "limits": {
+    "requests": 48,
+    "seconds_per_case": 285
+  },
+  "policy_packets": {
+    "framework_contract_sourcing": {
+      "trace": "/app/runs/procurement/framework_contract_sourcing-20261008-233538/run-trace.jsonl.log.gz",
+      "quote_count": 17
+    },
+    "comparison_offers": {
+      "trace": "/app/runs/procurement/comparison_offers-20261009-000540/run-trace.jsonl.log.gz",
+      "quote_count": 4
+    },
+    "amount_calculation": {
+      "trace": "/app/runs/procurement/amount_calculation_gpt-20261009-185203/run-trace.jsonl.log.gz",
+      "quote_count": 4
+    },
+    "document_consistency": {
+      "trace": "/app/runs/procurement/document_consistency_gpt-20261009-210540/run-trace.jsonl.log.gz",
+      "quote_count": 0
+    },
+    "award_selection": {
+      "trace": "/app/runs/procurement/award_selection_gpt-20261010-080738/run-trace.jsonl.log.gz",
+      "quote_count": 2
+    }
+  },
+  "rule_definitions_sha256": {
+    "framework_contract_sourcing": "1e1cf43ed9dafc973015e1a1d8fb932cc0ff5728d7c5933930bcf7a25b312eee",
+    "comparison_offers": "51f9b95b4015b1b4b39cf9eb6aed98ba8de7c6a0567daab39ccbcb6c3ee3426b",
+    "amount_calculation": "505ddd3cdae1431673b74bd29c902e7b0ba815a4d9d0665247c9c28edb7614ab",
+    "document_consistency": "04eb5af17fb3c073b4ae37d1cc158e228b156608fa263a1c39042b8af4ad3b14",
+    "award_selection": "6eb85494eee2c5cd3f7c9ca8fe10818167b4a54a8dd66d5d81113c48c237dbce"
+  },
+  "cases": [
+    {
+      "case_id": "beschaffungsantrag-01",
+      "result": "angenommen",
+      "rule_results": [
+        {
+          "rule_id": "framework_contract_sourcing",
+          "verdict": "unknown",
+          "reason": "rule_error: missing-verified-case-quote, item-text-not-in-case:E15",
+          "case_quotes": [],
+          "policy_quotes": []
+        },
+        {
+          "rule_id": "comparison_offers",
+          "verdict": "pass",
+          "reason": "The procurement application lists a \"Preisvergleich, drei schriftliche Angebote\" as the method and states that three offers were collected. Policy E2 requires three offers unless a framework agreement is in force, and no framework supplier is claimed. The case documents (C1, C2, C3) provide three distinct supplier offers, satisfying the quoted requirement.",
+          "case_quotes": [
+            {
+              "document": "beschaffungsantrag.pdf",
+              "quote": "Vergabeart Preisvergleich, drei schriftliche Angebote"
+            }
+          ],
+          "policy_quotes": [
+            {
+              "corpus": "university-kassel-public-de",
+              "doc_id": "4bea4f9c-217e-42a8-afd3-beccd578adef",
+              "quote": "Man muss bereits während der Bestellung die Zuordnung eingeben. Grundsätzlich müssen 3 Angebote eingeholt werden, Ausnahme bei Rahmenvertragspartnern. Rahmenvertragspartner sind Lieferfirmen, bei denen die vertraglich vereinbarten Produkte gekauft werden müssen. Sollte man ein Produkt bestellen wollen, zu dem ein Rahmenvertrag besteht, muss man dieses Produkt ausschließlich beim Rahmenvertragspartner bestellen"
+            }
+          ]
+        },
+        {
+          "rule_id": "amount_calculation",
+          "verdict": "pass",
+          "reason": "All line-by-line calculations in the case documents match the totals provided in the documents. For each offer the summed net amount, VAT and gross amount are correct according to the 19% German VAT rate already stated explicitly. The policy set in the source does not contain a specific obligation on arithmetic correctness at this request stage, so no policy violation can be found.",
+          "case_quotes": [
+            {
+              "document": "angebot-1.pdf",
+              "quote": "Bezeichnung Menge Einzelpreis Gesamt netto\nnetto\nDigitales Speicheroszilloskop, 4 Kanäle, 350 MHz, 1 2.390,00 € 2.390,00 €\n5 GS/s\nPassiver Tastkopf 10:1, 500 MHz 4 48,00 € 192,00 €\nWerkskalibrierschein 1 85,00 € 85,00 €\n\nSumme netto 2.667,00 €\nzzgl. 19 % USt. 506,73 €\nAngebotssumme brutto 3.173,73"
+            },
+            {
+              "document": "beschaffungsantrag.pdf",
+              "quote": "Pos. Bezeichnung Menge EP netto GP netto\n1 Digitales Speicheroszilloskop, 4 Kanäle, 350 MHz, 5 GS/s 1 2.390,00 € 2.390,00 €\n2 Passiver Tastkopf 10:1, 500 MHz 4 48,00 € 192,00 €\n3 Werkskalibrierschein 1 85,00 € 85,00 €\n\nSumme netto 2.667,00 €\nzzgl. 19 % USt. 506,73 €\nGesamtbetrag brutto 3.173,73"
+            }
+          ],
+          "policy_quotes": []
+        },
+        {
+          "rule_id": "document_consistency",
+          "verdict": "unknown",
+          "reason": "No policy found in the corpus.",
+          "case_quotes": [],
+          "policy_quotes": []
+        },
+        {
+          "rule_id": "award_selection",
+          "verdict": "unknown",
+          "reason": "The applicable policy quotes (E1, E2) address the requirement that public procurement authorities binding procurement decisions must disclose all weighting criteria to bidders.  They do not contain an explicit award‑criterion requirement for internal procurement or a rule that the price must be the sole decisive factor in this context.  Consequently, the quoted policy does not provide a material, applicable obligation that can be evaluated against the award notice in the case documents, leaving the compliance question technically unresolved.",
+          "case_quotes": [
+            {
+              "document": "vergabevermerk.pdf",
+              "quote": "Zuschlag an Oszillo-Kontor Vehrs GmbH, 2.667,00 € netto"
+            }
+          ],
+          "policy_quotes": [
+            {
+              "corpus": "hessian-law-de",
+              "doc_id": "LARE190016873",
+              "quote": "Eine Vergabestelle ist also aus Gründen der Rechtsstaatlichkeit, Vorhersehbarkeit und Transparenz des Wertungsverfahrens an Wertungskriterien gebunden, d.h. es dürfen nur Zuschlagskriterien bei der Wertung zur Anwendung gelangen, die zuvor den Bietern bekannt gemacht worden sind."
+            },
+            {
+              "corpus": "hessian-law-de",
+              "doc_id": "LARE190016873",
+              "quote": "In der Auslegung, welche die Richtlinie 93/37 durch das in der Rechtssache „…-Bau AG“ ergangene Urteil des EuGH vom 12.12.2002 – C-470/99 - erhalten hat, fordert die Vorschrift in einem wörtlich zu verstehenden Sinn die Bekanntgabe aller vorgesehenen Zuschlagskriterien einschließlich sog. Unterkriterien, die – vor einer Angebotsabgabe – in der Vergabebekanntmachung oder in den Vergabeunterlagen zu erfolgen hat [OLG München Beschl. v. 19.3.2009 – Az. Verg 2/09 – Rn. 37 ff; Beschl. v. 29.7.2010 – Az. Verg 9/10 – Rn. 78]."
+            }
+          ]
+        }
+      ],
+      "audit_failures": [],
+      "degraded": true,
+      "elapsed_seconds": 56.1,
+      "requests_used_cumulative": 5
+    },
+    {
+      "case_id": "beschaffungsantrag-02",
+      "result": "angenommen",
+      "rule_results": [
+        {
+          "rule_id": "framework_contract_sourcing",
+          "verdict": "unknown",
+          "reason": "rule_error: missing-verified-policy-quote",
+          "case_quotes": [],
+          "policy_quotes": []
+        },
+        {
+          "rule_id": "comparison_offers",
+          "verdict": "unknown",
+          "reason": "rule_error: policy_gap; no applicable direct-award method in retrieved quote packet",
+          "case_quotes": [
+            {
+              "document": "email-beschaffungsantrag.pdf",
+              "quote": "Da der Auftragswert unter 1.000 € liegt, habe ich nur dieses eine Angebot\neingeholt (Direktvergabe"
+            },
+            {
+              "document": "email-beschaffungsantrag.pdf",
+              "quote": "Summe 673,00 € netto, 800,87 € brutto"
+            }
+          ],
+          "policy_quotes": [
+            {
+              "corpus": "university-kassel-public-de",
+              "doc_id": "4bea4f9c-217e-42a8-afd3-beccd578adef",
+              "quote": "Man muss bereits während der Bestellung die Zuordnung eingeben. Grundsätzlich müssen 3 Angebote eingeholt werden, Ausnahme bei Rahmenvertragspartnern. Rahmenvertragspartner sind Lieferfirmen, bei denen die vertraglich vereinbarten Produkte gekauft werden müssen. Sollte man ein Produkt bestellen wollen, zu dem ein Rahmenvertrag besteht, muss man dieses Produkt ausschließlich beim Rahmenvertragspartner bestellen"
+            },
+            {
+              "corpus": "university-kassel-public-en",
+              "doc_id": "e2943ed5-522f-4987-895e-8227d86cce3c",
+              "quote": "Order value up to\n€ 50,000 net\n\nRequest for quotation by the demand center possible under the following conditions:\n\n1. Specification of the required performance requirements / functionalities\n\n2. On this basis, at least three comparable offers must be obtained\n\n3. The form \"Invitation to tender\" is used to obtain tenders (if necessary, supplemented by an annex describing the requirements for the equipment to be supplied in more detail)"
+            },
+            {
+              "corpus": "university-kassel-public-de",
+              "doc_id": "835ca50e-172f-4a99-9462-b58f6861a199",
+              "quote": "Auftragswert bis\n€ 50.000 netto\n\nAngebotseinholung durch die Bedarfsstelle unter folgenden Voraussetzungen möglich:\n\n1. Festlegung der geforderten Leistungsanforderungen / Funktionalitäten\n\n2. Auf dieser Grundlage sind mind. drei vergleichbare Angebote einzuholen\n\n3. für die Angebotseinholung wird der Vordruck „Aufforderung zur Angebotsabgabe“ verwendet (ggf. um eine Anlage ergänzt, aus der die Anforderungen an das zu liefernde Gerät näher beschrieben werden)"
+            }
+          ]
+        },
+        {
+          "rule_id": "amount_calculation",
+          "verdict": "pass",
+          "reason": "All stated line item quantities, unit prices, and net totals sum correctly to 673,00 €; with a 19 % VAT the calculated gross of 800,87 € matches the amounts reported in both the offer (C1) and the procurement request (C2). No arithmetic discrepancy is evident at the pre‑order stage.",
+          "case_quotes": [
+            {
+              "document": "angebot-1.pdf",
+              "quote": "Lötstation digital 80 W mit Ablage 2 189,00 € 378,00"
+            },
+            {
+              "document": "angebot-1.pdf",
+              "quote": "Heißluft-Rework-Station 700 W 1 245,00 € 245,00"
+            },
+            {
+              "document": "angebot-1.pdf",
+              "quote": "Entlötpumpe Metall, antistatisch 4 12,50 € 50,00"
+            },
+            {
+              "document": "angebot-1.pdf",
+              "quote": "Summe netto 673,00 €\nzzgl. 19 % USt. 127,87 €\nAngebotssumme brutto 800,87"
+            },
+            {
+              "document": "email-beschaffungsantrag.pdf",
+              "quote": "Summe 673,00 € netto, 800,87 € brutto. Da der Auftragswert unter 1.000 € liegt, habe ich nur dieses eine Angebot\neingeholt (Direktvergabe"
+            }
+          ],
+          "policy_quotes": []
+        },
+        {
+          "rule_id": "document_consistency",
+          "verdict": "unknown",
+          "reason": "No policy found in the corpus.",
+          "case_quotes": [],
+          "policy_quotes": []
+        },
+        {
+          "rule_id": "award_selection",
+          "verdict": "not_applicable",
+          "reason": "The case documents contain no separate award proposal or award table; thus the rule does not apply as no award decision is being reviewed.",
+          "case_quotes": [
+            {
+              "document": "email-beschaffungsantrag.pdf",
+              "quote": "Auftrag 2140112. Frau Prof. Eichelkraut ist in Kopie und hat die Bestellung beauftragt"
+            }
+          ],
+          "policy_quotes": []
+        }
+      ],
+      "audit_failures": [],
+      "degraded": true,
+      "elapsed_seconds": 31.1,
+      "requests_used_cumulative": 10
+    },
+    {
+      "case_id": "beschaffungsantrag-03",
+      "result": "abgelehnt",
+      "rule_results": [
+        {
+          "rule_id": "framework_contract_sourcing",
+          "verdict": "fail",
+          "reason": "The request orders monitors from an external webshop rather than the framework partner, violating the exclusivity requirement of a framework contract.",
+          "case_quotes": [
+            {
+              "document": "email-beschaffungsantrag.pdf",
+              "quote": "9. 2 × Monitor 27 Zoll, WQHD, höhenverstellbar, je 169,00 € brutto = 338,00 €\nhttps://www.bildschirmlager-vogtland.de/produkt/27-wqhd-hv-2207"
+            }
+          ],
+          "policy_quotes": [
+            {
+              "corpus": "university-kassel-public-de",
+              "doc_id": "ed4468f8-7450-4152-a624-33503f78f919",
+              "quote": "Derzeit existieren Rahmenverträge u.a. für Büromaterial, PC's/Notebooks und Monitore, Büropapiere, Bürodrehstühle, Seminarstühle, Büromobiliar, Kopiergeräte, Software-Produkte von Microsoft."
+            },
+            {
+              "corpus": "university-kassel-public-de",
+              "doc_id": "4bea4f9c-217e-42a8-afd3-beccd578adef",
+              "quote": "Grundsätzlich müssen 3 Angebote eingeholt werden, Ausnahme bei Rahmenvertragspartnern. Rahmenvertragspartner sind Lieferfirmen, bei denen die vertraglich vereinbarten Produkte gekauft werden müssen."
+            },
+            {
+              "corpus": "university-kassel-public-de",
+              "doc_id": "4bea4f9c-217e-42a8-afd3-beccd578adef",
+              "quote": "Sollte man ein Produkt bestellen wollen, zu dem ein Rahmenvertrag besteht, muss man dieses Produkt ausschließlich beim Rahmenvertragspartner bestellen"
+            }
+          ]
+        },
+        {
+          "rule_id": "comparison_offers",
+          "verdict": "unknown",
+          "reason": "rule_error: missing-verified-case-quote",
+          "case_quotes": [],
+          "policy_quotes": []
+        },
+        {
+          "rule_id": "amount_calculation",
+          "verdict": "pass",
+          "reason": "All listed unit prices and quantities, when multiplied and summed, correctly reproduce the stated gross total of €926.93. No arithmetic discrepancy is found.",
+          "case_quotes": [],
+          "policy_quotes": []
+        },
+        {
+          "rule_id": "document_consistency",
+          "verdict": "unknown",
+          "reason": "No policy found in the corpus.",
+          "case_quotes": [],
+          "policy_quotes": []
+        },
+        {
+          "rule_id": "award_selection",
+          "verdict": "not_applicable",
+          "reason": "The case documents contain only a procurement request with list of items and prices, but no evidence of an award proposal or comparison offers that would invoke an award criterion requirement.",
+          "case_quotes": [],
+          "policy_quotes": []
+        }
+      ],
+      "audit_failures": [],
+      "degraded": true,
+      "elapsed_seconds": 32.59,
+      "requests_used_cumulative": 15
+    },
+    {
+      "case_id": "beschaffungsantrag-04",
+      "result": "abgelehnt",
+      "rule_results": [
+        {
+          "rule_id": "framework_contract_sourcing",
+          "verdict": "not_applicable",
+          "reason": "The policy scope (E1) lists framework contracts for office supplies, PCs, monitors, etc., but does not include lab power supplies or USB interface modules. Because no framework exists for these product classes, the procurement request does not trigger the ordering‑channel duty in E16, and the requirement for three offers (E15) is already satisfied by the three offers in the case packet.",
+          "case_quotes": [
+            {
+              "document": "beschaffungsantrag.pdf",
+              "quote": "Pos. Bezeichnung Menge EP netto GP netto\n1 Labornetzgerät programmierbar, 0 bis 60 V / 0 bis 10 A 3 740,00 € 2.220,00 €\n2 USB-Schnittstellenmodul mit Kabelsatz 3 60,00 € 180,00"
+            }
+          ],
+          "policy_quotes": [
+            {
+              "corpus": "university-kassel-public-de",
+              "doc_id": "ed4468f8-7450-4152-a624-33503f78f919",
+              "quote": "Derzeit existieren Rahmenverträge u.a. für Büromaterial, PC's/Notebooks und Monitore, Büropapiere, Bürodrehstühle, Seminarstühle, Büromobiliar, Kopiergeräte, Software-Produkte von Microsoft."
+            },
+            {
+              "corpus": "university-kassel-public-de",
+              "doc_id": "4bea4f9c-217e-42a8-afd3-beccd578adef",
+              "quote": "Grundsätzlich müssen 3 Angebote eingeholt werden, Ausnahme bei Rahmenvertragspartnern. Rahmenvertragspartner sind Lieferfirmen, bei denen die vertraglich vereinbarten Produkte gekauft werden müssen."
+            },
+            {
+              "corpus": "university-kassel-public-de",
+              "doc_id": "4bea4f9c-217e-42a8-afd3-beccd578adef",
+              "quote": "Sollte man ein Produkt bestellen wollen, zu dem ein Rahmenvertrag besteht, muss man dieses Produkt ausschließlich beim Rahmenvertragspartner bestellen"
+            }
+          ]
+        },
+        {
+          "rule_id": "comparison_offers",
+          "verdict": "pass",
+          "reason": "The procuring request specifies a price comparison with the requirement of three written offers (Vergabeart Preisvergleich, drei schriftliche Angebote). The policy quote E2 establishes that, in the absence of a framework contract partner, exactly three offers must be obtained. The case documents contain three distinct supplier offers (C1, C2, C3) that meet this requirement, and C4 clearly indicates it is not a framework product. Therefore the submitted packet satisfies the quoted policy.",
+          "case_quotes": [
+            {
+              "document": "beschaffungsantrag.pdf",
+              "quote": "Vergabeart Preisvergleich, drei schriftliche Angebote\nEingeholte Angebote 3\nVorgesehener Lieferant Netzgeräte Hollerbach GmbH, Kitzingen (Angebot HB-270512"
+            }
+          ],
+          "policy_quotes": [
+            {
+              "corpus": "university-kassel-public-de",
+              "doc_id": "4bea4f9c-217e-42a8-afd3-beccd578adef",
+              "quote": "Man muss bereits während der Bestellung die Zuordnung eingeben. Grundsätzlich müssen 3 Angebote eingeholt werden, Ausnahme bei Rahmenvertragspartnern. Rahmenvertragspartner sind Lieferfirmen, bei denen die vertraglich vereinbarten Produkte gekauft werden müssen. Sollte man ein Produkt bestellen wollen, zu dem ein Rahmenvertrag besteht, muss man dieses Produkt ausschließlich beim Rahmenvertragspartner bestellen"
+            }
+          ]
+        },
+        {
+          "rule_id": "amount_calculation",
+          "verdict": "unknown",
+          "reason": "The policy quotes provide only procedural requirements for contract value thresholds and procurement methods; none of the quotes contain an explicit rule stating the net or gross calculations must match the listed subtotals. Therefore the documented arithmetic discrepancy cannot be judged against a policy obligation and the case falls under an unexplained discrepancy.",
+          "case_quotes": [
+            {
+              "document": "beschaffungsantrag.pdf",
+              "quote": "Summe netto 3.384,00 €\nzzgl. 19 % USt. 642,96 €\nGesamtbetrag brutto 4.026,96"
+            }
+          ],
+          "policy_quotes": []
+        },
+        {
+          "rule_id": "document_consistency",
+          "verdict": "unknown",
+          "reason": "No policy found in the corpus.",
+          "case_quotes": [],
+          "policy_quotes": []
+        },
+        {
+          "rule_id": "award_selection",
+          "verdict": "unknown",
+          "reason": "The policy quotes (E1, E2) only specify that award criteria must be disclosed to bidders prior to bid submission; they do not contain explicit requirements for the subsequent award decision or the use of a specific pricing criterion.  The case does contain an award proposal (C5) and all relevant data (prices, quantities, and provider) and no evidence of a material breach of any quoted obligation.  Because the policy is silent on the specific award procedure required in this internal procurement scenario, the rule cannot determine whether the award process was compliant.",
+          "case_quotes": [
+            {
+              "document": "vergabevermerk.pdf",
+              "quote": "Zuschlag an Netzgeräte Hollerbach GmbH, 2.400,00 € netto"
+            }
+          ],
+          "policy_quotes": [
+            {
+              "corpus": "hessian-law-de",
+              "doc_id": "LARE190016873",
+              "quote": "Eine Vergabestelle ist also aus Gründen der Rechtsstaatlichkeit, Vorhersehbarkeit und Transparenz des Wertungsverfahrens an Wertungskriterien gebunden, d.h. es dürfen nur Zuschlagskriterien bei der Wertung zur Anwendung gelangen, die zuvor den Bietern bekannt gemacht worden sind."
+            },
+            {
+              "corpus": "hessian-law-de",
+              "doc_id": "LARE190016873",
+              "quote": "In der Auslegung, welche die Richtlinie 93/37 durch das in der Rechtssache „…-Bau AG“ ergangene Urteil des EuGH vom 12.12.2002 – C-470/99 - erhalten hat, fordert die Vorschrift in einem wörtlich zu verstehenden Sinn die Bekanntgabe aller vorgesehenen Zuschlagskriterien einschließlich sog. Unterkriterien, die – vor einer Angebotsabgabe – in der Vergabebekanntmachung oder in den Vergabeunterlagen zu erfolgen hat [OLG München Beschl. v. 19.3.2009 – Az. Verg 2/09 – Rn. 37 ff; Beschl. v. 29.7.2010 – Az. Verg 9/10 – Rn. 78]."
+            }
+          ]
+        }
+      ],
+      "audit_failures": [
+        {
+          "rule_id": "amount_calculation",
+          "verdict": "fail",
+          "reason": "Sum of 2 line totals is 2400.00, but form states 3384.00",
+          "case_quotes": [
+            {
+              "document": "beschaffungsantrag.pdf",
+              "quote": "1          Labornetzgerät programmierbar, 0 bis 60 V / 0 bis 10 A                            3             740,00 €          2.220,00 €"
+            },
+            {
+              "document": "beschaffungsantrag.pdf",
+              "quote": "2          USB-Schnittstellenmodul mit Kabelsatz                                             3              60,00 €            180,00 €"
+            },
+            {
+              "document": "beschaffungsantrag.pdf",
+              "quote": "Summe netto                                                                                                  3.384,00 €"
+            }
+          ],
+          "policy_quotes": []
+        }
+      ],
+      "degraded": true,
+      "elapsed_seconds": 38.28,
+      "requests_used_cumulative": 19
+    },
+    {
+      "case_id": "beschaffungsantrag-05",
+      "result": "angenommen",
+      "rule_results": [
+        {
+          "rule_id": "framework_contract_sourcing",
+          "verdict": "pass",
+          "reason": "All requested items belong to the framework catalogue listed in E1, and the procurement cycle is carried out in accordance with E5 (orders exclusively via WPS) and E15/E16 (orders via the framework partner).",
+          "case_quotes": [
+            {
+              "document": "beschaffungsantrag.pdf",
+              "quote": "Vergabeart Abruf aus Rahmenvertrag über WPS (Warenkorb WK-0027-18834"
+            },
+            {
+              "document": "beschaffungsantrag.pdf",
+              "quote": "Vorgesehener Lieferant Tessmer & Kolb Systemhaus GmbH, Offenbach"
+            },
+            {
+              "document": "beschaffungsantrag.pdf",
+              "quote": "1 Tragbarer Rechner 14 Zoll, 32 GB RAM, 1 TB SSD, 2 1.127,40 € 2.254,80"
+            },
+            {
+              "document": "beschaffungsantrag.pdf",
+              "quote": "2 Monitor 27 Zoll, WQHD, USB-C, höhenverstellbar 2 218,60 € 437,20"
+            },
+            {
+              "document": "beschaffungsantrag.pdf",
+              "quote": "3 Dockingstation USB-C, 100 W 2 139,90 € 279,80"
+            },
+            {
+              "document": "wps-warenkorb.pdf",
+              "quote": "Warenkorb WK-0027-18834"
+            },
+            {
+              "document": "wps-warenkorb.pdf",
+              "quote": "Katalog Rahmenvertrag IT-Arbeitsplatzgeräte der hessischen Hochschulen, Los 2"
+            },
+            {
+              "document": "wps-warenkorb.pdf",
+              "quote": "Lieferant (Rahmenvertragspartner) Tessmer & Kolb Systemhaus GmbH, Offenbach"
+            },
+            {
+              "document": "wps-warenkorb.pdf",
+              "quote": "Katalogpreise gemäß Rahmenvertrag. Vergleichsangebote sind für Rahmenvertragsartikel nicht erforderlich"
+            }
+          ],
+          "policy_quotes": [
+            {
+              "corpus": "university-kassel-public-de",
+              "doc_id": "ed4468f8-7450-4152-a624-33503f78f919",
+              "quote": "Derzeit existieren Rahmenverträge u.a. für Büromaterial, PC's/Notebooks und Monitore, Büropapiere, Bürodrehstühle, Seminarstühle, Büromobiliar, Kopiergeräte, Software-Produkte von Microsoft."
+            },
+            {
+              "corpus": "university-kassel-public-de",
+              "doc_id": "b47abafe-da27-4c97-b584-38b8683c959e",
+              "quote": "Bitte beachten Sie, dass gemäß den Vertragsbedingungen alle Bestellungen ausschließlich über unser WPS-System (Web Procurement System) getätigt werden müssen."
+            },
+            {
+              "corpus": "university-kassel-public-de",
+              "doc_id": "4bea4f9c-217e-42a8-afd3-beccd578adef",
+              "quote": "Grundsätzlich müssen 3 Angebote eingeholt werden, Ausnahme bei Rahmenvertragspartnern. Rahmenvertragspartner sind Lieferfirmen, bei denen die vertraglich vereinbarten Produkte gekauft werden müssen."
+            },
+            {
+              "corpus": "university-kassel-public-de",
+              "doc_id": "4bea4f9c-217e-42a8-afd3-beccd578adef",
+              "quote": "Sollte man ein Produkt bestellen wollen, zu dem ein Rahmenvertrag besteht, muss man dieses Produkt ausschließlich beim Rahmenvertragspartner bestellen"
+            }
+          ]
+        },
+        {
+          "rule_id": "comparison_offers",
+          "verdict": "pass",
+          "reason": "The procurement request is for products listed in a framework contract (WPS Warenkorb WK-0027-18834).  Policy E2 establishes that for framework‑contracted products nothing requires independent comparison offers – the policy text explicitly states that such offers are not required for framework‑contract items.  The case documents show the request was made under the framework method, the item catalogue and supplier match the framework, and the claim that no offers are needed is consistent with the policy.",
+          "case_quotes": [
+            {
+              "document": "wps-warenkorb.pdf",
+              "quote": "Vergleichsangebote sind für Rahmenvertragsartikel nicht erforderlich"
+            }
+          ],
+          "policy_quotes": [
+            {
+              "corpus": "university-kassel-public-de",
+              "doc_id": "4bea4f9c-217e-42a8-afd3-beccd578adef",
+              "quote": "Man muss bereits während der Bestellung die Zuordnung eingeben. Grundsätzlich müssen 3 Angebote eingeholt werden, Ausnahme bei Rahmenvertragspartnern. Rahmenvertragspartner sind Lieferfirmen, bei denen die vertraglich vereinbarten Produkte gekauft werden müssen. Sollte man ein Produkt bestellen wollen, zu dem ein Rahmenvertrag besteht, muss man dieses Produkt ausschließlich beim Rahmenvertragspartner bestellen"
+            }
+          ]
+        },
+        {
+          "rule_id": "amount_calculation",
+          "verdict": "pass",
+          "reason": "The net subtotals, the application of a 19% VAT rate, and the computed gross total in the procurement request are mathematically consistent with the figures shown in both the request (C1) and the associated Warenkorb (C2). No discrepancy is found that would violate the quoted policy.",
+          "case_quotes": [
+            {
+              "document": "wps-warenkorb.pdf",
+              "quote": "Warenwert netto 2.971,80 €\nUSt. 19 % 564,64 €\nGesamt brutto 3.536,44"
+            }
+          ],
+          "policy_quotes": [
+            {
+              "corpus": "university-kassel-public-en",
+              "doc_id": "e2943ed5-522f-4987-895e-8227d86cce3c",
+              "quote": "Order value up to\n€ 50,000 net\n\nRequest for quotation by the demand center possible under the following conditions:\n\n1. Specification of the required performance requirements / functionalities\n\n2. On this basis, at least three comparable offers must be obtained\n\n3. The form \"Invitation to tender\" is used to obtain tenders (if necessary, supplemented by an annex describing the requirements for the equipment to be supplied in more detail)\n\nOrder value over\n€ 50,000 net\n\nPreparation of a service specification (content: functionalities to be agreed), which serves as the basis for a formal award procedure and thus becomes the basis of the order\n\nContract value via\n€ 200,000 (incl. VAT)"
+            }
+          ]
+        },
+        {
+          "rule_id": "document_consistency",
+          "verdict": "unknown",
+          "reason": "No policy found in the corpus.",
+          "case_quotes": [],
+          "policy_quotes": []
+        },
+        {
+          "rule_id": "award_selection",
+          "verdict": "not_applicable",
+          "reason": "The procurement request cites a framework contract and does not record an award proposal or any claim of applied award criteria. The policy still requires that award criteria be disclosed to bidders prior to bid submission, but the case does not present any award decision or offer data. Therefore the rule about reviewing an award proposal before ordering cannot be evaluated.",
+          "case_quotes": [
+            {
+              "document": "beschaffungsantrag.pdf",
+              "quote": "Vergabeart Abruf aus Rahmenvertrag über WPS (Warenkorb WK-0027-18834"
+            }
+          ],
+          "policy_quotes": [
+            {
+              "corpus": "hessian-law-de",
+              "doc_id": "LARE190016873",
+              "quote": "Eine Vergabestelle ist also aus Gründen der Rechtsstaatlichkeit, Vorhersehbarkeit und Transparenz des Wertungsverfahrens an Wertungskriterien gebunden, d.h. es dürfen nur Zuschlagskriterien bei der Wertung zur Anwendung gelangen, die zuvor den Bietern bekannt gemacht worden sind."
+            },
+            {
+              "corpus": "hessian-law-de",
+              "doc_id": "LARE190016873",
+              "quote": "In der Auslegung, welche die Richtlinie 93/37 durch das in der Rechtssache „…-Bau AG“ ergangene Urteil des EuGH vom 12.12.2002 – C-470/99 - erhalten hat, fordert die Vorschrift in einem wörtlich zu verstehenden Sinn die Bekanntgabe aller vorgesehenen Zuschlagskriterien einschließlich sog. Unterkriterien, die – vor einer Angebotsabgabe – in der Vergabebekanntmachung oder in den Vergabeunterlagen zu erfolgen hat [OLG München Beschl. v. 19.3.2009 – Az. Verg 2/09 – Rn. 37 ff; Beschl. v. 29.7.2010 – Az. Verg 9/10 – Rn. 78]."
+            }
+          ]
+        }
+      ],
+      "audit_failures": [],
+      "degraded": true,
+      "elapsed_seconds": 80.82,
+      "requests_used_cumulative": 25
+    },
+    {
+      "case_id": "beschaffungsantrag-06",
+      "result": "abgelehnt",
+      "rule_results": [
+        {
+          "rule_id": "framework_contract_sourcing",
+          "verdict": "unknown",
+          "reason": "rule_error: missing-verified-case-quote",
+          "case_quotes": [],
+          "policy_quotes": []
+        },
+        {
+          "rule_id": "comparison_offers",
+          "verdict": "fail",
+          "reason": "Rule E2 mandates three independent offers for the requested goods (analyzeswaage and ultraschall‑bad) since no framework contract exists. The submitted packet contains only two offers.",
+          "case_quotes": [
+            {
+              "document": "beschaffungsantrag.pdf",
+              "quote": "Eingeholte Angebote 2"
+            },
+            {
+              "document": "angebot-1.pdf",
+              "quote": "Angebot Nr. IW-6620"
+            },
+            {
+              "document": "angebot-2.pdf",
+              "quote": "Angebot S-27-1187"
+            }
+          ],
+          "policy_quotes": [
+            {
+              "corpus": "university-kassel-public-de",
+              "doc_id": "4bea4f9c-217e-42a8-afd3-beccd578adef",
+              "quote": "Man muss bereits während der Bestellung die Zuordnung eingeben. Grundsätzlich müssen 3 Angebote eingeholt werden, Ausnahme bei Rahmenvertragspartnern. Rahmenvertragspartner sind Lieferfirmen, bei denen die vertraglich vereinbarten Produkte gekauft werden müssen. Sollte man ein Produkt bestellen wollen, zu dem ein Rahmenvertrag besteht, muss man dieses Produkt ausschließlich beim Rahmenvertragspartner bestellen"
+            }
+          ]
+        },
+        {
+          "rule_id": "amount_calculation",
+          "verdict": "not_applicable",
+          "reason": "The case documents contain correctly calculated net and gross totals for the procurement request. None of the provided policy quotes mandate a specific arithmetic validation or impose a separate rule about numerical consistency at this stage, so no policy violation exists.",
+          "case_quotes": [
+            {
+              "document": "angebot-1.pdf",
+              "quote": "Bezeichnung Menge Einzelpreis netto Gesamt netto\nAnalysenwaage, Ablesbarkeit 0,1 mg, Höchstlast 220 g, interne 1 1.980,00 € 1.980,00 €\nJustierung\nUltraschall-Reinigungsbad 9 l, beheizbar 1 690,00 € 690,00 €\n\nSumme netto 2.670,00 €\nzzgl. 19 % USt. 507,30 €\nAngebotssumme brutto 3.177,30"
+            }
+          ],
+          "policy_quotes": []
+        },
+        {
+          "rule_id": "document_consistency",
+          "verdict": "unknown",
+          "reason": "No policy found in the corpus.",
+          "case_quotes": [],
+          "policy_quotes": []
+        },
+        {
+          "rule_id": "award_selection",
+          "verdict": "not_applicable",
+          "reason": "The policy quotes E1 and E2 concern the publication of evaluation criteria before bid submission, not the procedural requirement to review an award proposal before ordering. The case documents contain an award proposal (Vergabevermerk C4) and compare offers, but there is no policy obligation quoted that mandates this review. Hence the rule does not apply to the facts presented.",
+          "case_quotes": [],
+          "policy_quotes": []
+        }
+      ],
+      "audit_failures": [
+        {
+          "rule_id": "comparison_offers",
+          "verdict": "fail",
+          "reason": "The supplied policy trace says a 3-offer comparison method, the request reports 2, and includes 2 separately attached offer PDFs; no standalone offer was detected under another filename",
+          "case_quotes": [
+            {
+              "document": "beschaffungsantrag.pdf",
+              "quote": "Vergabeart                                          Preisvergleich"
+            },
+            {
+              "document": "beschaffungsantrag.pdf",
+              "quote": "Eingeholte Angebote                                 2"
+            },
+            {
+              "document": "beschaffungsantrag.pdf",
+              "quote": "Rahmenvertragsprodukt                               [ ] ja [X] nein"
+            },
+            {
+              "document": "angebot-1.pdf",
+              "quote": "Angebot Nr. IW-6620"
+            },
+            {
+              "document": "angebot-2.pdf",
+              "quote": "Universität Wernstadt                                                                                       Angebot S-27-1187"
+            }
+          ],
+          "policy_quotes": [
+            {
+              "corpus": "university-kassel-public-de",
+              "doc_id": "4bea4f9c-217e-42a8-afd3-beccd578adef",
+              "quote": "Man muss bereits während der Bestellung die Zuordnung eingeben. Grundsätzlich müssen 3 Angebote eingeholt werden, Ausnahme bei Rahmenvertragspartnern. Rahmenvertragspartner sind Lieferfirmen, bei denen die vertraglich vereinbarten Produkte gekauft werden müssen. Sollte man ein Produkt bestellen wollen, zu dem ein Rahmenvertrag besteht, muss man dieses Produkt ausschließlich beim Rahmenvertragspartner bestellen"
+            }
+          ]
+        }
+      ],
+      "degraded": true,
+      "elapsed_seconds": 50.87,
+      "requests_used_cumulative": 31
+    },
+    {
+      "case_id": "beschaffungsantrag-07",
+      "result": "abgelehnt",
+      "rule_results": [
+        {
+          "rule_id": "framework_contract_sourcing",
+          "verdict": "unknown",
+          "reason": "rule_error: missing-verified-case-quote, scope-text-not-in-policy:E1, item-text-not-in-case:E1, decision-changed-without-source-explanation",
+          "case_quotes": [],
+          "policy_quotes": []
+        },
+        {
+          "rule_id": "comparison_offers",
+          "verdict": "pass",
+          "reason": "The procurement request categorises the purchase as a price comparison requiring three written offers, and the submission contains exactly three independent offers from distinct suppliers with separate pricing. The policy (E2) obliges the procurement to obtain three offers when no framework contract applies, and no framework exception is triggered for the camera product. Therefore the requirement is satisfied.",
+          "case_quotes": [
+            {
+              "document": "beschaffungsantrag.pdf",
+              "quote": "Vergabeart Preisvergleich, drei schriftliche Angebote"
+            },
+            {
+              "document": "beschaffungsantrag.pdf",
+              "quote": "Eingeholte Angebote 3"
+            },
+            {
+              "document": "angebot-2.pdf",
+              "quote": "Pos Artikel / Leistung Menge EP netto GP netto\n1 Thermografiekamera 640 x 480, radiometrisch, 1 2.190,00 € 2.190,00"
+            },
+            {
+              "document": "angebot-3.pdf",
+              "quote": "Bezeichnung Menge Einzelpreis netto Gesamt netto\nIR-Kamera VGA-Auflösung, radiometrisch, 1.500 °C 1 2.540,00 € 2.540,00"
+            }
+          ],
+          "policy_quotes": [
+            {
+              "corpus": "university-kassel-public-de",
+              "doc_id": "4bea4f9c-217e-42a8-afd3-beccd578adef",
+              "quote": "Man muss bereits während der Bestellung die Zuordnung eingeben. Grundsätzlich müssen 3 Angebote eingeholt werden, Ausnahme bei Rahmenvertragspartnern. Rahmenvertragspartner sind Lieferfirmen, bei denen die vertraglich vereinbarten Produkte gekauft werden müssen. Sollte man ein Produkt bestellen wollen, zu dem ein Rahmenvertrag besteht, muss man dieses Produkt ausschließlich beim Rahmenvertragspartner bestellen"
+            }
+          ]
+        },
+        {
+          "rule_id": "amount_calculation",
+          "verdict": "pass",
+          "reason": "The recalculated net totals, VAT amounts, and gross totals in the procurement request match the amounts presented in the offers and comply with the policy requirements for a purchase under €50,000 net and a net unit price above €800.01 for an independently usable device.",
+          "case_quotes": [],
+          "policy_quotes": [
+            {
+              "corpus": "university-kassel-public-en",
+              "doc_id": "e2943ed5-522f-4987-895e-8227d86cce3c",
+              "quote": "Order value up to\n€ 50,000 net\n\nRequest for quotation by the demand center possible under the following conditions:\n\n1. Specification of the required performance requirements / functionalities\n\n2. On this basis, at least three comparable offers must be obtained\n\n3. The form \"Invitation to tender\" is used to obtain tenders (if necessary, supplemented by an annex describing the requirements for the equipment to be supplied in more detail)\n\nOrder value over\n€ 50,000 net\n\nPreparation of a service specification (content: functionalities to be agreed), which serves as the basis for a formal award procedure and thus becomes the basis of the order\n\nContract value via\n€ 200,000 (incl. VAT)"
+            },
+            {
+              "corpus": "university-kassel-public-en",
+              "doc_id": "14905af1-6c3b-49b8-8350-da0d21b7f13d",
+              "quote": "Purchases from € 800.01 must fulfill the following two requirements:\n1. it must be an independently usable device.\n2. the net unit price must be € 800.01 or more."
+            }
+          ]
+        },
+        {
+          "rule_id": "document_consistency",
+          "verdict": "unknown",
+          "reason": "No policy found in the corpus.",
+          "case_quotes": [],
+          "policy_quotes": []
+        },
+        {
+          "rule_id": "award_selection",
+          "verdict": "unknown",
+          "reason": "Policy E2 requires that all desired evaluation criteria, including sub‑criteria, be disclosed prior to bid submission. The case documents contain the procurement request, the three offers, and a subsequent award note, but none of these documents provide the explicit list of requirements that were shown to the bidders. Since the policy does not specify whether the undisclosed criteria were in fact presented elsewhere, the evidence does not determine compliance or violation, yielding a technical uncertainty.",
+          "case_quotes": [
+            {
+              "document": "beschaffungsantrag.pdf",
+              "quote": "Vergabeart Preisvergleich, drei schriftliche Angebote\nEingeholte Angebote 3\nVorgesehener Lieferant Thermoskop Ruhland GmbH, Erlangen (Angebot TR-A-27-0902"
+            }
+          ],
+          "policy_quotes": [
+            {
+              "corpus": "hessian-law-de",
+              "doc_id": "LARE190016873",
+              "quote": "In der Auslegung, welche die Richtlinie 93/37 durch das in der Rechtssache „…-Bau AG“ ergangene Urteil des EuGH vom 12.12.2002 – C-470/99 - erhalten hat, fordert die Vorschrift in einem wörtlich zu verstehenden Sinn die Bekanntgabe aller vorgesehenen Zuschlagskriterien einschließlich sog. Unterkriterien, die – vor einer Angebotsabgabe – in der Vergabebekanntmachung oder in den Vergabeunterlagen zu erfolgen hat [OLG München Beschl. v. 19.3.2009 – Az. Verg 2/09 – Rn. 37 ff; Beschl. v. 29.7.2010 – Az. Verg 9/10 – Rn. 78]."
+            }
+          ]
+        }
+      ],
+      "audit_failures": [
+        {
+          "rule_id": "document_consistency",
+          "verdict": "fail",
+          "reason": "offer_vs_award_note: M-5531 should be 2350.00 net per the referenced original, but the other document states 3243.00",
+          "case_quotes": [
+            {
+              "document": "angebot-2.pdf",
+              "quote": "Summe netto           2.350,00 €"
+            },
+            {
+              "document": "vergabevermerk.pdf",
+              "quote": "Infrarot-Technik Mergenthal          M-5531               04.08.2027          3.243,00 €   3.859,17 €      3"
+            }
+          ],
+          "policy_quotes": []
+        }
+      ],
+      "degraded": true,
+      "elapsed_seconds": 53.34,
+      "requests_used_cumulative": 37
+    },
+    {
+      "case_id": "beschaffungsantrag-08",
+      "result": "angenommen",
+      "rule_results": [
+        {
+          "rule_id": "framework_contract_sourcing",
+          "verdict": "unknown",
+          "reason": "rule_error: missing-verified-case-quote, decision-changed-without-source-explanation",
+          "case_quotes": [],
+          "policy_quotes": []
+        },
+        {
+          "rule_id": "comparison_offers",
+          "verdict": "unknown",
+          "reason": "rule_error: scope-text-not-in-policy:E2, item-text-not-in-case:E2",
+          "case_quotes": [],
+          "policy_quotes": []
+        },
+        {
+          "rule_id": "amount_calculation",
+          "verdict": "unknown",
+          "reason": "The case documents contain complete, self‑consistent arithmetic for the offers, but no policy quote in the provided sources explicitly requires or regulates arithmetic accuracy at the pre‑order stage, so the rule’s requirement cannot be verified.",
+          "case_quotes": [
+            {
+              "document": "angebot-1.pdf",
+              "quote": "Summe netto 2.264,00"
+            },
+            {
+              "document": "angebot-2.pdf",
+              "quote": "Summe netto 2.418,00"
+            },
+            {
+              "document": "angebot-3.pdf",
+              "quote": "Summe netto 2.511,00"
+            }
+          ],
+          "policy_quotes": []
+        },
+        {
+          "rule_id": "document_consistency",
+          "verdict": "unknown",
+          "reason": "No policy found in the corpus.",
+          "case_quotes": [],
+          "policy_quotes": []
+        },
+        {
+          "rule_id": "award_selection",
+          "verdict": "not_applicable",
+          "reason": "No formal award proposal or award note is present in the case documents that indicates an award decision was made and recorded. Therefore the rule about reviewing an award before ordering does not apply.",
+          "case_quotes": [
+            {
+              "document": "email-korrespondenz.pdf",
+              "quote": "Das Angebot der Hovestadt Lichttechnik bleibt\nmit 2.264,00 € netto das günstigste; wir bitten um Bestellung dort"
+            }
+          ],
+          "policy_quotes": [
+            {
+              "corpus": "hessian-law-de",
+              "doc_id": "LARE190016873",
+              "quote": "Eine Vergabestelle ist also aus Gründen der Rechtsstaatlichkeit, Vorhersehbarkeit und Transparenz des Wertungsverfahrens an Wertungskriterien gebunden, d.h. es dürfen nur Zuschlagskriterien bei der Wertung zur Anwendung gelangen, die zuvor den Bietern bekannt gemacht worden sind."
+            },
+            {
+              "corpus": "hessian-law-de",
+              "doc_id": "LARE190016873",
+              "quote": "In der Auslegung, welche die Richtlinie 93/37 durch das in der Rechtssache „…-Bau AG“ ergangene Urteil des EuGH vom 12.12.2002 – C-470/99 - erhalten hat, fordert die Vorschrift in einem wörtlich zu verstehenden Sinn die Bekanntgabe aller vorgesehenen Zuschlagskriterien einschließlich sog. Unterkriterien, die – vor einer Angebotsabgabe – in der Vergabebekanntmachung oder in den Vergabeunterlagen zu erfolgen hat [OLG München Beschl. v. 19.3.2009 – Az. Verg 2/09 – Rn. 37 ff; Beschl. v. 29.7.2010 – Az. Verg 9/10 – Rn. 78]."
+            }
+          ]
+        }
+      ],
+      "audit_failures": [],
+      "degraded": true,
+      "elapsed_seconds": 60.61,
+      "requests_used_cumulative": 43
+    }
+  ],
+  "requests_used": 43,
+  "elapsed_seconds": 403.91
+}

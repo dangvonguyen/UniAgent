@@ -1,0 +1,148 @@
+[
+  {
+    "case_id": "beschaffungsantrag-01",
+    "result": "angenommen",
+    "expected_replay": "angenommen",
+    "audit_fail": [],
+    "expected_audit_fail": [],
+    "technical_rule_gaps": [
+      "framework_contract_sourcing",
+      "amount_calculation",
+      "document_consistency",
+      "award_selection"
+    ],
+    "label_matches_saved": true,
+    "audit_matches_saved": true
+  },
+  {
+    "case_id": "beschaffungsantrag-02",
+    "result": "angenommen",
+    "expected_replay": "angenommen",
+    "audit_fail": [],
+    "expected_audit_fail": [],
+    "technical_rule_gaps": [
+      "framework_contract_sourcing",
+      "comparison_offers",
+      "amount_calculation",
+      "document_consistency"
+    ],
+    "label_matches_saved": true,
+    "audit_matches_saved": true
+  },
+  {
+    "case_id": "beschaffungsantrag-03",
+    "result": "abgelehnt",
+    "expected_replay": "angenommen",
+    "audit_fail": [],
+    "expected_audit_fail": [],
+    "technical_rule_gaps": [
+      "comparison_offers",
+      "amount_calculation",
+      "document_consistency"
+    ],
+    "label_matches_saved": false,
+    "audit_matches_saved": true
+  },
+  {
+    "case_id": "beschaffungsantrag-04",
+    "result": "abgelehnt",
+    "expected_replay": "abgelehnt",
+    "audit_fail": [
+      {
+        "kind": "form_total",
+        "rule_id": "amount_calculation"
+      }
+    ],
+    "expected_audit_fail": [
+      {
+        "kind": "form_total",
+        "rule_id": "amount_calculation"
+      }
+    ],
+    "technical_rule_gaps": [
+      "amount_calculation",
+      "document_consistency",
+      "award_selection"
+    ],
+    "label_matches_saved": true,
+    "audit_matches_saved": true
+  },
+  {
+    "case_id": "beschaffungsantrag-05",
+    "result": "angenommen",
+    "expected_replay": "angenommen",
+    "audit_fail": [],
+    "expected_audit_fail": [],
+    "technical_rule_gaps": [
+      "amount_calculation",
+      "document_consistency"
+    ],
+    "label_matches_saved": true,
+    "audit_matches_saved": true
+  },
+  {
+    "case_id": "beschaffungsantrag-06",
+    "result": "abgelehnt",
+    "expected_replay": "abgelehnt",
+    "audit_fail": [
+      {
+        "kind": "declared_method_missing_offers",
+        "rule_id": "comparison_offers"
+      }
+    ],
+    "expected_audit_fail": [
+      {
+        "kind": "declared_method_missing_offers",
+        "rule_id": "comparison_offers"
+      }
+    ],
+    "technical_rule_gaps": [
+      "framework_contract_sourcing",
+      "amount_calculation",
+      "document_consistency",
+      "award_selection"
+    ],
+    "label_matches_saved": true,
+    "audit_matches_saved": true
+  },
+  {
+    "case_id": "beschaffungsantrag-07",
+    "result": "abgelehnt",
+    "expected_replay": "abgelehnt",
+    "audit_fail": [
+      {
+        "kind": "offer_vs_award_note",
+        "rule_id": "document_consistency"
+      }
+    ],
+    "expected_audit_fail": [
+      {
+        "kind": "offer_vs_award_note",
+        "rule_id": "document_consistency"
+      }
+    ],
+    "technical_rule_gaps": [
+      "framework_contract_sourcing",
+      "amount_calculation",
+      "document_consistency",
+      "award_selection"
+    ],
+    "label_matches_saved": true,
+    "audit_matches_saved": true
+  },
+  {
+    "case_id": "beschaffungsantrag-08",
+    "result": "angenommen",
+    "expected_replay": "angenommen",
+    "audit_fail": [],
+    "expected_audit_fail": [],
+    "technical_rule_gaps": [
+      "framework_contract_sourcing",
+      "comparison_offers",
+      "amount_calculation",
+      "document_consistency"
+    ],
+    "label_matches_saved": true,
+    "audit_matches_saved": true
+  }
+]

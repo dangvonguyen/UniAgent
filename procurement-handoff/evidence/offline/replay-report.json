@@ -1,0 +1,694 @@
+[
+  {
+    "case_id": "beschaffungsantrag-01",
+    "result": "angenommen",
+    "degraded": true,
+    "rules": [
+      {
+        "rule_id": "framework_contract_sourcing",
+        "verdict": "unknown",
+        "reason": "rule_error: missing-verified-case-quote, item-text-not-in-case:E15",
+        "gate_errors": [
+          "missing-verified-case-quote",
+          "item-text-not-in-case:E15"
+        ]
+      },
+      {
+        "rule_id": "comparison_offers",
+        "verdict": "pass",
+        "reason": "The procurement application lists a \"Preisvergleich, drei schriftliche Angebote\" as the method and states that three offers were collected. Policy E2 requires three offers unless a framework agreement is in force, and no framework supplier is claimed. The case documents (C1, C2, C3) provide three distinct supplier offers, satisfying the quoted requirement.",
+        "gate_errors": []
+      },
+      {
+        "rule_id": "amount_calculation",
+        "verdict": "unknown",
+        "reason": "rule_error: missing-verified-policy-or-case-source, missing-decision-evidence-link",
+        "gate_errors": [
+          "missing-verified-policy-or-case-source",
+          "missing-decision-evidence-link"
+        ]
+      },
+      {
+        "rule_id": "document_consistency",
+        "verdict": "unknown",
+        "reason": "policy_gap: no retrieved governing quote",
+        "gate_errors": []
+      },
+      {
+        "rule_id": "award_selection",
+        "verdict": "unknown",
+        "reason": "The applicable policy quotes (E1, E2) address the requirement that public procurement authorities binding procurement decisions must disclose all weighting criteria to bidders.  They do not contain an explicit award‑criterion requirement for internal procurement or a rule that the price must be the sole decisive factor in this context.  Consequently, the quoted policy does not provide a material, applicable obligation that can be evaluated against the award notice in the case documents, leaving the compliance question technically unresolved.",
+        "gate_errors": []
+      }
+    ],
+    "audit_fails": [],
+    "audit_trace": [
+      {
+        "event_type": "observation",
+        "tool": "procurement_pdf_audit",
+        "output": {
+          "policy_offer_count": 3,
+          "findings": [],
+          "coverage_gaps": {
+            "amount_calculation": [],
+            "document_consistency": [],
+            "award_selection": []
+          },
+          "note": "Enabled PDF contradictions and fully sourced three-offer checks can fail; other findings remain diagnostics."
+        }
+      }
+    ]
+  },
+  {
+    "case_id": "beschaffungsantrag-02",
+    "result": "angenommen",
+    "degraded": true,
+    "rules": [
+      {
+        "rule_id": "framework_contract_sourcing",
+        "verdict": "unknown",
+        "reason": "rule_error: missing-verified-policy-quote",
+        "gate_errors": [
+          "missing-verified-policy-quote"
+        ]
+      },
+      {
+        "rule_id": "comparison_offers",
+        "verdict": "unknown",
+        "reason": "policy_gap: direct-award method not established",
+        "gate_errors": [
+          "claimed-direct-award-has-no-applicable-method-quote"
+        ]
+      },
+      {
+        "rule_id": "amount_calculation",
+        "verdict": "unknown",
+        "reason": "rule_error: missing-verified-policy-or-case-source, missing-decision-evidence-link",
+        "gate_errors": [
+          "missing-verified-policy-or-case-source",
+          "missing-decision-evidence-link"
+        ]
+      },
+      {
+        "rule_id": "document_consistency",
+        "verdict": "unknown",
+        "reason": "policy_gap: no retrieved governing quote",
+        "gate_errors": []
+      },
+      {
+        "rule_id": "award_selection",
+        "verdict": "not_applicable",
+        "reason": "The case documents contain no separate award proposal or award table; thus the rule does not apply as no award decision is being reviewed.",
+        "gate_errors": []
+      }
+    ],
+    "audit_fails": [],
+    "audit_trace": [
+      {
+        "event_type": "observation",
+        "tool": "procurement_pdf_audit",
+        "output": {
+          "policy_offer_count": 3,
+          "findings": [],
+          "coverage_gaps": {
+            "amount_calculation": [
+              "No complete item table to audit"
+            ],
+            "document_consistency": [],
+            "award_selection": []
+          },
+          "note": "Enabled PDF contradictions and fully sourced three-offer checks can fail; other findings remain diagnostics."
+        }
+      }
+    ]
+  },
+  {
+    "case_id": "beschaffungsantrag-03",
+    "result": "angenommen",
+    "degraded": true,
+    "rules": [
+      {
+        "rule_id": "framework_contract_sourcing",
+        "verdict": "unknown",
+        "reason": "rule_error: ordering-duty-not-shown-due-at-request-stage",
+        "gate_errors": [
+          "ordering-duty-not-shown-due-at-request-stage"
+        ]
+      },
+      {
+        "rule_id": "comparison_offers",
+        "verdict": "unknown",
+        "reason": "rule_error: missing-verified-case-quote",
+        "gate_errors": [
+          "missing-verified-case-quote"
+        ]
+      },
+      {
+        "rule_id": "amount_calculation",
+        "verdict": "unknown",
+        "reason": "rule_error: missing-verified-policy-or-case-source, missing-decision-evidence-link",
+        "gate_errors": [
+          "missing-verified-policy-or-case-source",
+          "missing-decision-evidence-link"
+        ]
+      },
+      {
+        "rule_id": "document_consistency",
+        "verdict": "unknown",
+        "reason": "policy_gap: no retrieved governing quote",
+        "gate_errors": []
+      },
+      {
+        "rule_id": "award_selection",
+        "verdict": "not_applicable",
+        "reason": "The case documents contain only a procurement request with list of items and prices, but no evidence of an award proposal or comparison offers that would invoke an award criterion requirement.",
+        "gate_errors": []
+      }
+    ],
+    "audit_fails": [],
+    "audit_trace": [
+      {
+        "event_type": "observation",
+        "tool": "procurement_pdf_audit",
+        "output": {
+          "policy_offer_count": 3,
+          "findings": [],
+          "coverage_gaps": {
+            "amount_calculation": [
+              "No complete item table to audit"
+            ],
+            "document_consistency": [
+              "No attached offer or linked catalogue cart to compare"
+            ],
+            "award_selection": []
+          },
+          "note": "Enabled PDF contradictions and fully sourced three-offer checks can fail; other findings remain diagnostics."
+        }
+      }
+    ]
+  },
+  {
+    "case_id": "beschaffungsantrag-04",
+    "result": "abgelehnt",
+    "degraded": true,
+    "rules": [
+      {
+        "rule_id": "framework_contract_sourcing",
+        "verdict": "not_applicable",
+        "reason": "The policy scope (E1) lists framework contracts for office supplies, PCs, monitors, etc., but does not include lab power supplies or USB interface modules. Because no framework exists for these product classes, the procurement request does not trigger the ordering‑channel duty in E16, and the requirement for three offers (E15) is already satisfied by the three offers in the case packet.",
+        "gate_errors": []
+      },
+      {
+        "rule_id": "comparison_offers",
+        "verdict": "pass",
+        "reason": "The procuring request specifies a price comparison with the requirement of three written offers (Vergabeart Preisvergleich, drei schriftliche Angebote). The policy quote E2 establishes that, in the absence of a framework contract partner, exactly three offers must be obtained. The case documents contain three distinct supplier offers (C1, C2, C3) that meet this requirement, and C4 clearly indicates it is not a framework product. Therefore the submitted packet satisfies the quoted policy.",
+        "gate_errors": []
+      },
+      {
+        "rule_id": "amount_calculation",
+        "verdict": "unknown",
+        "reason": "The policy quotes provide only procedural requirements for contract value thresholds and procurement methods; none of the quotes contain an explicit rule stating the net or gross calculations must match the listed subtotals. Therefore the documented arithmetic discrepancy cannot be judged against a policy obligation and the case falls under an unexplained discrepancy.",
+        "gate_errors": []
+      },
+      {
+        "rule_id": "document_consistency",
+        "verdict": "unknown",
+        "reason": "policy_gap: no retrieved governing quote",
+        "gate_errors": []
+      },
+      {
+        "rule_id": "award_selection",
+        "verdict": "unknown",
+        "reason": "The policy quotes (E1, E2) only specify that award criteria must be disclosed to bidders prior to bid submission; they do not contain explicit requirements for the subsequent award decision or the use of a specific pricing criterion.  The case does contain an award proposal (C5) and all relevant data (prices, quantities, and provider) and no evidence of a material breach of any quoted obligation.  Because the policy is silent on the specific award procedure required in this internal procurement scenario, the rule cannot determine whether the award process was compliant.",
+        "gate_errors": []
+      }
+    ],
+    "audit_fails": [
+      {
+        "rule_id": "amount_calculation",
+        "verdict": "fail",
+        "reason": "Sum of 2 line totals is 2400.00, but form states 3384.00",
+        "case_quotes": [
+          {
+            "document": "beschaffungsantrag.pdf",
+            "quote": "1          Labornetzgerät programmierbar, 0 bis 60 V / 0 bis 10 A                            3             740,00 €          2.220,00 €"
+          },
+          {
+            "document": "beschaffungsantrag.pdf",
+            "quote": "2          USB-Schnittstellenmodul mit Kabelsatz                                             3              60,00 €            180,00 €"
+          },
+          {
+            "document": "beschaffungsantrag.pdf",
+            "quote": "Summe netto                                                                                                  3.384,00 €"
+          }
+        ],
+        "policy_quotes": []
+      }
+    ],
+    "audit_trace": [
+      {
+        "event_type": "observation",
+        "tool": "procurement_pdf_audit",
+        "output": {
+          "policy_offer_count": 3,
+          "findings": [
+            {
+              "rule_id": "amount_calculation",
+              "kind": "form_total",
+              "detail": "Sum of 2 line totals is 2400.00, but form states 3384.00",
+              "sources": [
+                {
+                  "document": "beschaffungsantrag.pdf",
+                  "quote": "1          Labornetzgerät programmierbar, 0 bis 60 V / 0 bis 10 A                            3             740,00 €          2.220,00 €"
+                },
+                {
+                  "document": "beschaffungsantrag.pdf",
+                  "quote": "2          USB-Schnittstellenmodul mit Kabelsatz                                             3              60,00 €            180,00 €"
+                },
+                {
+                  "document": "beschaffungsantrag.pdf",
+                  "quote": "Summe netto                                                                                                  3.384,00 €"
+                }
+              ],
+              "basis": "document",
+              "disposition": "fail",
+              "gate": []
+            },
+            {
+              "rule_id": "document_consistency",
+              "kind": "request_vs_chosen_offer",
+              "detail": "request_vs_chosen_offer: HB-270512 should be 2400.00 net per the referenced original, but the other document states 3384.00",
+              "sources": [
+                {
+                  "document": "angebot-1.pdf",
+                  "quote": "Summe netto           2.400,00 €"
+                },
+                {
+                  "document": "beschaffungsantrag.pdf",
+                  "quote": "Vorgesehener Lieferant                              Netzgeräte Hollerbach GmbH, Kitzingen (Angebot HB-270512)"
+                },
+                {
+                  "document": "beschaffungsantrag.pdf",
+                  "quote": "Summe netto                                                                                                  3.384,00 €"
+                }
+              ],
+              "basis": "document",
+              "disposition": "diagnostic",
+              "gate": [
+                "self-contradiction-kind-not-enabled"
+              ]
+            }
+          ],
+          "coverage_gaps": {
+            "amount_calculation": [],
+            "document_consistency": [],
+            "award_selection": []
+          },
+          "note": "Enabled PDF contradictions and fully sourced three-offer checks can fail; other findings remain diagnostics."
+        }
+      }
+    ]
+  },
+  {
+    "case_id": "beschaffungsantrag-05",
+    "result": "angenommen",
+    "degraded": true,
+    "rules": [
+      {
+        "rule_id": "framework_contract_sourcing",
+        "verdict": "pass",
+        "reason": "All requested items belong to the framework catalogue listed in E1, and the procurement cycle is carried out in accordance with E5 (orders exclusively via WPS) and E15/E16 (orders via the framework partner).",
+        "gate_errors": []
+      },
+      {
+        "rule_id": "comparison_offers",
+        "verdict": "pass",
+        "reason": "The procurement request is for products listed in a framework contract (WPS Warenkorb WK-0027-18834).  Policy E2 establishes that for framework‑contracted products nothing requires independent comparison offers – the policy text explicitly states that such offers are not required for framework‑contract items.  The case documents show the request was made under the framework method, the item catalogue and supplier match the framework, and the claim that no offers are needed is consistent with the policy.",
+        "gate_errors": []
+      },
+      {
+        "rule_id": "amount_calculation",
+        "verdict": "unknown",
+        "reason": "rule_error: missing-decision-evidence-link",
+        "gate_errors": [
+          "missing-decision-evidence-link"
+        ]
+      },
+      {
+        "rule_id": "document_consistency",
+        "verdict": "unknown",
+        "reason": "policy_gap: no retrieved governing quote",
+        "gate_errors": []
+      },
+      {
+        "rule_id": "award_selection",
+        "verdict": "not_applicable",
+        "reason": "The procurement request cites a framework contract and does not record an award proposal or any claim of applied award criteria. The policy still requires that award criteria be disclosed to bidders prior to bid submission, but the case does not present any award decision or offer data. Therefore the rule about reviewing an award proposal before ordering cannot be evaluated.",
+        "gate_errors": []
+      }
+    ],
+    "audit_fails": [],
+    "audit_trace": [
+      {
+        "event_type": "observation",
+        "tool": "procurement_pdf_audit",
+        "output": {
+          "policy_offer_count": 3,
+          "findings": [],
+          "coverage_gaps": {
+            "amount_calculation": [],
+            "document_consistency": [],
+            "award_selection": []
+          },
+          "note": "Enabled PDF contradictions and fully sourced three-offer checks can fail; other findings remain diagnostics."
+        }
+      }
+    ]
+  },
+  {
+    "case_id": "beschaffungsantrag-06",
+    "result": "abgelehnt",
+    "degraded": true,
+    "rules": [
+      {
+        "rule_id": "framework_contract_sourcing",
+        "verdict": "unknown",
+        "reason": "rule_error: missing-verified-case-quote",
+        "gate_errors": [
+          "missing-verified-case-quote"
+        ]
+      },
+      {
+        "rule_id": "comparison_offers",
+        "verdict": "fail",
+        "reason": "Rule E2 mandates three independent offers for the requested goods (analyzeswaage and ultraschall‑bad) since no framework contract exists. The submitted packet contains only two offers.",
+        "gate_errors": []
+      },
+      {
+        "rule_id": "amount_calculation",
+        "verdict": "unknown",
+        "reason": "rule_error: amount-subject-present-not-applicable-unfounded",
+        "gate_errors": [
+          "amount-subject-present-not-applicable-unfounded"
+        ]
+      },
+      {
+        "rule_id": "document_consistency",
+        "verdict": "unknown",
+        "reason": "policy_gap: no retrieved governing quote",
+        "gate_errors": []
+      },
+      {
+        "rule_id": "award_selection",
+        "verdict": "unknown",
+        "reason": "rule_error: award-subject-present-not-applicable-unfounded",
+        "gate_errors": [
+          "award-subject-present-not-applicable-unfounded"
+        ]
+      }
+    ],
+    "audit_fails": [
+      {
+        "rule_id": "comparison_offers",
+        "verdict": "fail",
+        "reason": "The supplied policy trace says a 3-offer comparison method, the request reports 2, and includes 2 separately attached offer PDFs; no standalone offer was detected under another filename",
+        "case_quotes": [
+          {
+            "document": "beschaffungsantrag.pdf",
+            "quote": "Vergabeart                                          Preisvergleich"
+          },
+          {
+            "document": "beschaffungsantrag.pdf",
+            "quote": "Eingeholte Angebote                                 2"
+          },
+          {
+            "document": "beschaffungsantrag.pdf",
+            "quote": "Rahmenvertragsprodukt                               [ ] ja [X] nein"
+          },
+          {
+            "document": "angebot-1.pdf",
+            "quote": "Angebot Nr. IW-6620"
+          },
+          {
+            "document": "angebot-2.pdf",
+            "quote": "Universität Wernstadt                                                                                       Angebot S-27-1187"
+          }
+        ],
+        "policy_quotes": [
+          {
+            "corpus": "university-kassel-public-de",
+            "doc_id": "4bea4f9c-217e-42a8-afd3-beccd578adef",
+            "quote": "Man muss bereits während der Bestellung die Zuordnung eingeben. Grundsätzlich müssen 3 Angebote eingeholt werden, Ausnahme bei Rahmenvertragspartnern. Rahmenvertragspartner sind Lieferfirmen, bei denen die vertraglich vereinbarten Produkte gekauft werden müssen. Sollte man ein Produkt bestellen wollen, zu dem ein Rahmenvertrag besteht, muss man dieses Produkt ausschließlich beim Rahmenvertragspartner bestellen"
+          }
+        ]
+      }
+    ],
+    "audit_trace": [
+      {
+        "event_type": "observation",
+        "tool": "procurement_pdf_audit",
+        "output": {
+          "policy_offer_count": 3,
+          "findings": [
+            {
+              "rule_id": "comparison_offers",
+              "kind": "declared_method_missing_offers",
+              "detail": "The supplied policy trace says a 3-offer comparison method, the request reports 2, and includes 2 separately attached offer PDFs; no standalone offer was detected under another filename",
+              "sources": [
+                {
+                  "document": "beschaffungsantrag.pdf",
+                  "quote": "Vergabeart                                          Preisvergleich"
+                },
+                {
+                  "document": "beschaffungsantrag.pdf",
+                  "quote": "Eingeholte Angebote                                 2"
+                },
+                {
+                  "document": "beschaffungsantrag.pdf",
+                  "quote": "Rahmenvertragsprodukt                               [ ] ja [X] nein"
+                },
+                {
+                  "document": "angebot-1.pdf",
+                  "quote": "Angebot Nr. IW-6620"
+                },
+                {
+                  "document": "angebot-2.pdf",
+                  "quote": "Universität Wernstadt                                                                                       Angebot S-27-1187"
+                },
+                {
+                  "document": "university-kassel-public-de/4bea4f9c-217e-42a8-afd3-beccd578adef",
+                  "quote": "Man muss bereits während der Bestellung die Zuordnung eingeben. Grundsätzlich müssen 3 Angebote eingeholt werden, Ausnahme bei Rahmenvertragspartnern. Rahmenvertragspartner sind Lieferfirmen, bei denen die vertraglich vereinbarten Produkte gekauft werden müssen. Sollte man ein Produkt bestellen wollen, zu dem ein Rahmenvertrag besteht, muss man dieses Produkt ausschließlich beim Rahmenvertragspartner bestellen"
+                }
+              ],
+              "basis": "policy",
+              "disposition": "fail",
+              "gate": []
+            }
+          ],
+          "coverage_gaps": {
+            "amount_calculation": [],
+            "document_consistency": [],
+            "award_selection": []
+          },
+          "note": "Enabled PDF contradictions and fully sourced three-offer checks can fail; other findings remain diagnostics."
+        }
+      }
+    ]
+  },
+  {
+    "case_id": "beschaffungsantrag-07",
+    "result": "abgelehnt",
+    "degraded": true,
+    "rules": [
+      {
+        "rule_id": "framework_contract_sourcing",
+        "verdict": "unknown",
+        "reason": "rule_error: missing-verified-case-quote, scope-text-not-in-policy:E1, item-text-not-in-case:E1, decision-change-without-new-verified-source",
+        "gate_errors": [
+          "missing-verified-case-quote",
+          "scope-text-not-in-policy:E1",
+          "item-text-not-in-case:E1",
+          "decision-change-without-new-verified-source"
+        ]
+      },
+      {
+        "rule_id": "comparison_offers",
+        "verdict": "pass",
+        "reason": "The procurement request categorises the purchase as a price comparison requiring three written offers, and the submission contains exactly three independent offers from distinct suppliers with separate pricing. The policy (E2) obliges the procurement to obtain three offers when no framework contract applies, and no framework exception is triggered for the camera product. Therefore the requirement is satisfied.",
+        "gate_errors": []
+      },
+      {
+        "rule_id": "amount_calculation",
+        "verdict": "unknown",
+        "reason": "rule_error: missing-verified-policy-or-case-source, missing-decision-evidence-link",
+        "gate_errors": [
+          "missing-verified-policy-or-case-source",
+          "missing-decision-evidence-link"
+        ]
+      },
+      {
+        "rule_id": "document_consistency",
+        "verdict": "unknown",
+        "reason": "policy_gap: no retrieved governing quote",
+        "gate_errors": []
+      },
+      {
+        "rule_id": "award_selection",
+        "verdict": "unknown",
+        "reason": "Policy E2 requires that all desired evaluation criteria, including sub‑criteria, be disclosed prior to bid submission. The case documents contain the procurement request, the three offers, and a subsequent award note, but none of these documents provide the explicit list of requirements that were shown to the bidders. Since the policy does not specify whether the undisclosed criteria were in fact presented elsewhere, the evidence does not determine compliance or violation, yielding a technical uncertainty.",
+        "gate_errors": []
+      }
+    ],
+    "audit_fails": [
+      {
+        "rule_id": "document_consistency",
+        "verdict": "fail",
+        "reason": "offer_vs_award_note: M-5531 should be 2350.00 net per the referenced original, but the other document states 3243.00",
+        "case_quotes": [
+          {
+            "document": "angebot-2.pdf",
+            "quote": "Summe netto           2.350,00 €"
+          },
+          {
+            "document": "vergabevermerk.pdf",
+            "quote": "Infrarot-Technik Mergenthal          M-5531               04.08.2027          3.243,00 €   3.859,17 €      3"
+          }
+        ],
+        "policy_quotes": []
+      }
+    ],
+    "audit_trace": [
+      {
+        "event_type": "observation",
+        "tool": "procurement_pdf_audit",
+        "output": {
+          "policy_offer_count": 3,
+          "findings": [
+            {
+              "rule_id": "document_consistency",
+              "kind": "offer_vs_award_note",
+              "detail": "offer_vs_award_note: M-5531 should be 2350.00 net per the referenced original, but the other document states 3243.00",
+              "sources": [
+                {
+                  "document": "angebot-2.pdf",
+                  "quote": "Summe netto           2.350,00 €"
+                },
+                {
+                  "document": "vergabevermerk.pdf",
+                  "quote": "Infrarot-Technik Mergenthal          M-5531               04.08.2027          3.243,00 €   3.859,17 €      3"
+                }
+              ],
+              "basis": "document",
+              "disposition": "fail",
+              "gate": []
+            },
+            {
+              "rule_id": "award_selection",
+              "kind": "selected_above_cheapest_equivalent_offer",
+              "detail": "Award note states net price decides among equally suitable offers; selected offer TR-A-27-0902 is 2600.00 net, lowest linked original offer is 2350.00 net (+250.00)",
+              "sources": [
+                {
+                  "document": "vergabevermerk.pdf",
+                  "quote": "Wertung                                   Preis (netto), bei gleicher technischer Eignung"
+                },
+                {
+                  "document": "vergabevermerk.pdf",
+                  "quote": "Alle Kameras erfüllen die geforderten Leistungsmerkmale. Den Zuschlag erhält das günstigste Angebot der"
+                },
+                {
+                  "document": "beschaffungsantrag.pdf",
+                  "quote": "Vorgesehener Lieferant                              Thermoskop Ruhland GmbH, Erlangen (Angebot TR-A-27-0902)"
+                },
+                {
+                  "document": "vergabevermerk.pdf",
+                  "quote": "Zuschlag an                               Thermoskop Ruhland GmbH, 2.600,00 € netto"
+                },
+                {
+                  "document": "angebot-1.pdf",
+                  "quote": "Summe netto    2.600,00 €"
+                },
+                {
+                  "document": "angebot-2.pdf",
+                  "quote": "Summe netto           2.350,00 €"
+                }
+              ],
+              "basis": "policy",
+              "disposition": "diagnostic",
+              "gate": [
+                "no-obligation-kind-for-finding"
+              ]
+            }
+          ],
+          "coverage_gaps": {
+            "amount_calculation": [],
+            "document_consistency": [],
+            "award_selection": []
+          },
+          "note": "Enabled PDF contradictions and fully sourced three-offer checks can fail; other findings remain diagnostics."
+        }
+      }
+    ]
+  },
+  {
+    "case_id": "beschaffungsantrag-08",
+    "result": "angenommen",
+    "degraded": true,
+    "rules": [
+      {
+        "rule_id": "framework_contract_sourcing",
+        "verdict": "unknown",
+        "reason": "rule_error: missing-verified-case-quote, decision-change-without-new-verified-source",
+        "gate_errors": [
+          "missing-verified-case-quote",
+          "decision-change-without-new-verified-source"
+        ]
+      },
+      {
+        "rule_id": "comparison_offers",
+        "verdict": "unknown",
+        "reason": "rule_error: scope-text-not-in-policy:E2, item-text-not-in-case:E2",
+        "gate_errors": [
+          "scope-text-not-in-policy:E2",
+          "item-text-not-in-case:E2"
+        ]
+      },
+      {
+        "rule_id": "amount_calculation",
+        "verdict": "unknown",
+        "reason": "The case documents contain complete, self‑consistent arithmetic for the offers, but no policy quote in the provided sources explicitly requires or regulates arithmetic accuracy at the pre‑order stage, so the rule’s requirement cannot be verified.",
+        "gate_errors": []
+      },
+      {
+        "rule_id": "document_consistency",
+        "verdict": "unknown",
+        "reason": "policy_gap: no retrieved governing quote",
+        "gate_errors": []
+      },
+      {
+        "rule_id": "award_selection",
+        "verdict": "not_applicable",
+        "reason": "No formal award proposal or award note is present in the case documents that indicates an award decision was made and recorded. Therefore the rule about reviewing an award before ordering does not apply.",
+        "gate_errors": []
+      }
+    ],
+    "audit_fails": [],
+    "audit_trace": [
+      {
+        "event_type": "observation",
+        "tool": "procurement_pdf_audit",
+        "output": {
+          "policy_offer_count": 3,
+          "findings": [],
+          "coverage_gaps": {
+            "amount_calculation": [
+              "No complete item table to audit"
+            ],
+            "document_consistency": [],
+            "award_selection": []
+          },
+          "note": "Enabled PDF contradictions and fully sourced three-offer checks can fail; other findings remain diagnostics."
+        }
+      }
+    ]
+  }
+]
