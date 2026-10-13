@@ -23,10 +23,14 @@ from .procurement_scope_gate import (
     packet_has_applicable_direct_award_quote,
     scope_errors,
     stage_errors,
+    framework_provenance_errors,
 )
 from .procurement_evidence import decision_evidence_errors
 
 _LAYOUT_PADDING = re.compile(r" {3,}")
+# This is a separate budget for a citation-only correction, not the case
+# deadline. A slow malformed response must not consume the whole case.
+CITATION_RETRY_BUDGET_SECONDS = 75
 
 SYSTEM = """\
 You check one rule of a university administrative case against the policy that defines it. Your verdict decides whether the case is accepted or rejected, so apply the policy exactly as quoted.
@@ -202,6 +206,19 @@ async def _check_rule(
             SYSTEM, user, CheckAnswer, context=f"{case_id}:check_rule:{rule.id}"
         )
         problems = _answer_errors(rule.id, answer, policy, case_documents)
+        if "missing-verified-case-quote" in problems:
+            repaired, source_spans = _split_verified_case_lines(answer, case_documents)
+            if source_spans:
+                remaining = _answer_errors(rule.id, repaired, policy, case_documents)
+                trace.log("observation", tool="case_quote_line_repair", output={
+                    "rule_id": rule.id,
+                    "original_errors": problems,
+                    "remaining_errors": remaining,
+                    "verified_source_spans": source_spans,
+                    "verdict_unchanged": answer.verdict == repaired.verdict,
+                })
+                if not remaining:
+                    answer, problems = repaired, []
         if problems:
             trace.log(
                 "observation",
@@ -211,6 +228,17 @@ async def _check_rule(
                     "rejected_quotes": [q.model_dump() for q in answer.case_quotes],
                 },
             )
+            if "framework-cart-conflicts-with-uncited-off-contract-claim" in problems:
+                # A matching framework WPS cart is affirmative case evidence.
+                # Do not spend a citation retry on a rejection supported only
+                # by comparing pseudonymised supplier names.
+                trace.log("observation", tool="rule_error", output={
+                    "rule_id": rule.id,
+                    "reason": "framework_cart_requires_positive_departure_evidence",
+                    "basis": "supplier_identity_unresolved",
+                    "errors": problems,
+                })
+                return _unknown(rule.id, "rule_error: " + ", ".join(problems))
             # A citation retry can repair a malformed or omitted reference, but
             # it cannot supply a governing provision absent from this packet.
             # Check the entire packet (not just refs chosen by the model).
@@ -230,21 +258,37 @@ async def _check_rule(
                 })
                 return _source_gap(rule.id, answer, policy, case_documents)
             prior = answer
-            answer = await llm.complete_json(
-                SYSTEM,
-                user
-                + "\n\n<CITATION_FEEDBACK>\n"
-                f"The prior answer failed these source checks: {problems}. "
-                "Copy short contiguous spans from the numbered policy and PDF "
-                "documents. Link each product/method to the scope of its own "
-                "provision. If changing the verdict, explain what cited source "
-                "corrected the first decision in decision_change_evidence. "
-                "Never change a decision merely to satisfy a citation format. "
-                "If the packet cannot settle the issue, say unknown."
-                "\n</CITATION_FEEDBACK>",
-                CheckAnswer,
-                context=f"{case_id}:check_rule:{rule.id}:citation_retry",
-            )
+            try:
+                answer = await asyncio.wait_for(
+                    llm.complete_json(
+                        SYSTEM,
+                        user
+                        + "\n\n<CITATION_FEEDBACK>\n"
+                        f"The prior answer failed these source checks: {problems}. "
+                        f"Its prior verdict was {prior.verdict}. Keep that verdict when "
+                        "the correction only changes citation layout or the source link. "
+                        "Copy short contiguous spans from the numbered policy and PDF "
+                        "documents. Link each product/method to the scope of its own "
+                        "provision, including a more specific cited product scope. "
+                        "A pseudonymized institution or supplier name alone cannot "
+                        "make the rule not_applicable. If changing the verdict, explain what cited source "
+                        "corrected the first decision in decision_change_evidence. "
+                        "Never change a decision merely to satisfy a citation format. "
+                        "If the packet cannot settle the issue, say unknown."
+                        "\n</CITATION_FEEDBACK>",
+                        CheckAnswer,
+                        context=f"{case_id}:check_rule:{rule.id}:citation_retry",
+                    ),
+                    timeout=CITATION_RETRY_BUDGET_SECONDS,
+                )
+            except TimeoutError:
+                trace.log("observation", tool="rule_error", output={
+                    "rule_id": rule.id,
+                    "reason": "citation_retry_deadline_exceeded",
+                    "budget_seconds": CITATION_RETRY_BUDGET_SECONDS,
+                    "initial_gate_errors": problems,
+                })
+                return _unknown(rule.id, "rule_error: citation_retry_deadline_exceeded")
             problems = _answer_errors(rule.id, answer, policy, case_documents)
             if prior.verdict != answer.verdict:
                 trace.log("observation", output={
@@ -256,8 +300,12 @@ async def _check_rule(
                 elif not _change_evidence_verified(prior, answer, policy, case_documents):
                     problems.append("decision-change-evidence-not-in-sources")
             if problems:
+                basis = ("supplier_identity_unresolved"
+                         if "framework-cart-conflicts-with-uncited-off-contract-claim" in problems
+                         else "source_gate_unresolved")
                 trace.log("observation", tool="rule_error", output={
                     "rule_id": rule.id, "reason": "source_gate_failed_after_retry",
+                    "basis": basis,
                     "errors": problems,
                 })
                 return _unknown(rule.id, f"rule_error: {', '.join(problems)}")
@@ -333,9 +381,45 @@ def _answer_errors(rule_id, answer, policy, documents) -> list[str]:
     if answer.verdict in {"pass", "fail"}:
         errors.extend(scope_errors(rule_id, answer.scope_links, answer.policy_refs,
                                    policy, documents))
+        if rule_id == "framework_contract_sourcing":
+            errors.extend(_item_specific_scope_errors(answer.scope_links,
+                                                       answer.policy_refs, policy))
         errors.extend(stage_errors(rule_id, answer.verdict, answer.policy_refs,
-                                   policy, documents))
+                                   policy, documents, answer))
+        if rule_id == "framework_contract_sourcing" and answer.verdict == "fail":
+            errors.extend(framework_provenance_errors(answer, documents))
     return errors
+
+
+def _item_specific_scope_errors(links, refs, policy) -> list[str]:
+    """Flag a scope link when another cited quote names its item explicitly.
+
+    This does not classify items from a fixed product list. It only notices
+    that the model cited a different part of its own packet for the literal
+    product name. Without that competing positive source, it makes no claim.
+    """
+    cited = {ref.strip().upper() for ref in refs}
+    quoted = {ref: re.sub(r"[^\w]", "", source.quote.casefold())
+              for ref, source in policy.items() if ref in cited}
+    errors = []
+    for link in links:
+        ref = link.policy_ref.strip().upper()
+        if ref not in quoted:
+            continue
+        scope = re.sub(r"[^\w]", "", link.policy_scope.casefold())
+        for term in re.findall(r"(?iu)\b[^\W\d_]{8,}\b", link.case_item):
+            term = term.casefold()
+            if term.startswith(("rahmenvertrag", "lieferant", "vergabeverfahren",
+                                "warenkorb", "bestell", "beschaff")):
+                continue
+            if term in scope:
+                continue
+            alternatives = [other for other, text in quoted.items()
+                            if other != ref and term in text]
+            if alternatives:
+                errors.append(f"item-specific-scope-cited-elsewhere:{ref}:{term}")
+                break
+    return list(dict.fromkeys(errors))
 
 
 def _change_evidence_verified(prior, answer, policy, documents) -> bool:
@@ -466,6 +550,45 @@ def _verified_case_quotes(
             seen.add(key)
             verified_quotes.append(CaseQuote(document=doc.name, quote=text))
     return verified_quotes
+
+
+def _split_verified_case_lines(
+    answer: CheckAnswer, documents: LabeledDocuments
+) -> tuple[CheckAnswer, list[dict[str, str]]]:
+    """Repair layout citations only when *every* cited line exists in its PDF.
+
+    A model can omit table columns when copying several PDF lines together.
+    We never synthesize a contiguous quote or alter the verdict, reason, policy
+    references, or item-to-policy links. One unmatched substantive line aborts
+    the entire repair, leaving the existing feedback and source gate in place.
+    """
+    if not answer.case_quotes:
+        return answer, []
+    changed = False
+    checked: list[CheckQuote] = []
+    spans: list[dict[str, str]] = []
+    for citation in answer.case_quotes:
+        document = _resolve_document(citation.source, documents)
+        if document is None:
+            return answer, []
+        if match_case_parts(citation.quote, document.text):
+            checked.append(citation)
+            continue
+        lines = [line.strip() for line in citation.quote.splitlines() if line.strip()]
+        if len(lines) < 2:
+            return answer, []
+        for line in lines:
+            if sum(char.isalnum() for char in line) < 16:
+                return answer, []
+            source_span = match_case_quote(line, document.text)
+            if source_span is None:
+                return answer, []
+            checked.append(CheckQuote(source=citation.source, quote=source_span))
+            spans.append({"document": document.name, "quote": source_span})
+        changed = True
+    if not changed:
+        return answer, []
+    return answer.model_copy(update={"case_quotes": checked}), spans
 
 
 def _resolve_document(ref: str, documents: LabeledDocuments) -> CaseDocument | None:

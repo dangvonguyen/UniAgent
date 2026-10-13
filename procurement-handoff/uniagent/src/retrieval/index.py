@@ -13,6 +13,7 @@ from .corpora import PreparedCorpus, prepare_corpora
 from .dense import DenseIndex
 from .fusion import FusedHit, fuse_by_reciprocal_rank
 from .lexical import LexicalIndex
+from .passages import Passage
 
 
 async def build_index(
@@ -43,6 +44,15 @@ class CorpusIndex:
 
     def language(self, corpus: str) -> str:
         return self._lexical.retrievers[corpus].language
+
+    def previous_passage(self, passage: Passage) -> Passage | None:
+        """The directly preceding indexed passage of this same source document."""
+        if passage.index < 1:
+            return None
+        retriever = self._lexical.retrievers.get(passage.corpus)
+        if retriever is None:
+            return None
+        return retriever._passages.get(f"{passage.doc_id}#{passage.index - 1}")
 
     @classmethod
     async def build(cls, corpora: dict[str, PreparedCorpus]) -> CorpusIndex:

@@ -1,5 +1,11 @@
 # Báo cáo thử nghiệm pipeline xét hồ sơ mua sắm nội bộ
 
+<!-- PROCUREMENT_NINE_RULES_START -->
+> **Cập nhật 13/10/2026:** Đã định nghĩa và chạy 9 quy tắc trên 8 hồ sơ công khai. Nhãn cuối khớp 8/8 trên tập phát triển, nhưng 43/72 kết quả quy tắc là `unknown`; cả tám hồ sơ còn trạng thái `degraded`. Xem [lịch sử tune](docs/PROCUREMENT_TUNING.md#cập-nhật-lượt-chín-quy-tắc-ngày-13102026). Các mô tả năm quy tắc phía dưới là lịch sử giai đoạn trước.
+
+<!-- PROCUREMENT_NINE_RULES_END -->
+
+
 **UniAgent Task 2 · 8 hồ sơ công khai · cập nhật 11/10/2026**
 
 ## Mục tiêu và phạm vi

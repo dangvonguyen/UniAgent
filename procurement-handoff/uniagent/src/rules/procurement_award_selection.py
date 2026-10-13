@@ -5,38 +5,38 @@ from src.models import Rule
 PROCUREMENT_RULES = [Rule(
     id="award_selection",
     check=(
-        "Review the proposed award in a procurement request before ordering. "
-        "First identify whether an award proposal and comparable independent "
-        "offers are actually present; a request without an award note is not "
-        "evidence that an award rule was violated. Recheck the selected offer ID, "
-        "the original offer prices, net/gross basis, quantity and technical "
-        "equivalence. Treat a price transcribed into an award table as a claim "
-        "to verify against the original offer. Distinguish the case's stated "
-        "selection criterion from a policy obligation: a note saying 'cheapest' "
-        "does not create the legal rule. Use the retrieved policy to establish "
-        "the applicable award criterion and stage, including permissible "
-        "justifications for a more expensive offer. Do not assume price alone "
-        "must win if the policy uses an overall value criterion. A verified "
-        "mismatch is a diagnostic fact, not automatically a policy fail. Fail "
-        "only for a material breach of a quoted, applicable obligation after "
-        "checking an explanation or exception shown in the case. Pass only "
-        "where the applicable obligation and case evidence establish "
-        "compliance. If no award proposal exists, use not_applicable; if a "
-        "proposal exists but governing policy is missing or inconclusive, "
-        "use technical unknown. Cite short verbatim case and policy excerpts. "
-        "Do not decide framework sourcing, offer-count requirements, or "
-        "document arithmetic as separate rules."
+        "Review the proposed selection among offers before ordering.\n"
+        "1. Identify the proposal, comparable independent offers, and the "
+        "case's stated criterion. A missing award note alone is not a breach. "
+        "Use any verified document audit for offer identity and original "
+        "prices; leave copied-price contradictions to document_consistency.\n"
+        "2. Cite a retrieved, stage-applicable selection obligation and its "
+        "exceptions. Separate the applicant's stated criterion from that "
+        "obligation. A duty to announce criteria does not establish that the "
+        "lowest price must win; evaluate quality and permitted justifications "
+        "where the applicable policy requires them.\n"
+        "Verdict: fail only if the proposed selection materially breaches "
+        "the cited criterion with no supported justification or exception; "
+        "pass only if the quoted obligation and case facts establish "
+        "compliance; not_applicable if no selection among offers is proposed "
+        "or a cited scope excludes this request. If the relevant criterion "
+        "or comparison facts cannot be established, return technical unknown "
+        "with reason prefixed missing_policy, scope_unresolved, "
+        "case_fact_missing, or conflicting_sources. Cite short case and "
+        "policy excerpts for pass/fail.\n"
+        "Exclude framework sourcing, offer-count requirements and separate "
+        "document arithmetic."
     ),
     queries={
         "de": [
-            "Vergabe Zuschlag wirtschaftlichstes Angebot Preis Qualität Wertung öffentliche Auftraggeber Hessen",
-            "Beschaffung Universität Kassel Zuschlagsentscheidung Wertung Angebote Wirtschaftlichkeit",
-            "Hessisches Vergaberecht wirtschaftlichstes Angebot Zuschlagskriterien Dokumentation",
-            "Beschaffungsordnung Angebotswertung Zuschlag günstigstes geeignetes Angebot Begründung",
+            "Beschaffungsordnung Angebot auswählen Preisvergleich Begründung Beschaffungsantrag",
+            "Beschaffung Hochschule wirtschaftlichstes Angebot auswählen Preis Qualität",
+            "Beschaffungsrichtlinie günstigstes geeignetes Angebot Auswahl Begründung",
+            "interne Beschaffung Vergleichsangebote Auswahl Entscheidung vor Bestellung",
         ],
         "en": [
-            "Hesse public procurement most economically advantageous tender award criteria university",
-            "University Kassel procurement award selection price quality justification",
+            "university internal purchasing choose offer price comparison justification",
+            "procurement request select suitable economic offer before order",
         ],
     },
     questions={

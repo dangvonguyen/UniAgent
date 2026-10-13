@@ -11,24 +11,31 @@ PROCUREMENT_RULES: list[Rule] = [
     Rule(
         id="framework_contract_sourcing",
         check=(
-            "For each requested item, identify its product class, proposed "
-            "supplier and ordering channel. Link the item's class to the "
-            "retrieved framework-contract scope and then cite the operative "
-            "supplier/channel requirement and any exception. A contract for one "
-            "class says nothing about unrelated items. A structured catalogue "
-            "record is evidence of what the request claims, not proof that "
-            "the contract covers the item. Pseudonymized supplier names alone "
-            "cannot establish a violation. A supplier link in a request is a "
-            "proposal, not an executed order; fail for a forbidden channel only "
-            "if the quoted obligation attaches to this request stage or a case "
-            "document proves an actual order outside the contract. Check "
-            "quoted exceptions first. If any in-scope item clearly violates "
-            "an applicable duty, fail. If every in-scope item complies, pass. "
-            "If no item is in a positively quoted scope, not_applicable may "
-            "describe only the retrieved packet; an open 'u.a.' list cannot "
-            "prove global absence. If scope or obligation is unresolved, use "
-            "technical unknown. Keep general ordering workflow, offer count, "
-            "amounts and invoices outside this rule."
+            "Review the proposed purchase at the pre-order request stage.\n"
+            "1. For each item, identify its product class, proposed supplier "
+            "and ordering channel from the case. A catalogue record describes "
+            "the proposal; a supplier-name mismatch alone, especially with "
+            "pseudonyms, does not prove a breach.\n"
+            "2. Cite a retrieved provision placing that product class within "
+            "a binding framework contract, its supplier/channel obligation, "
+            "and any applicable exception. A contract for another class is "
+            "irrelevant. If the cited list says 'u.a.', state that it is open; "
+            "limit conclusions to the retrieved packet.\n"
+            "3. The request is the decision under review: a proposal to buy "
+            "an in-scope item from a source that the cited obligation forbids "
+            "can fail before an order is executed. Verify that the proposed "
+            "source is actually forbidden and that no quoted exception applies. "
+            "A bare product link without an identified intended supplier or "
+            "channel is insufficient.\n"
+            "Verdict: fail if any in-scope proposed item clearly breaches the "
+            "cited obligation; pass if every in-scope proposed item complies; "
+            "not_applicable only when cited policy scope and case evidence "
+            "positively establish that no item is covered. If the packet does not establish "
+            "scope or obligation, return technical unknown and prefix the "
+            "reason with missing_policy or scope_unresolved. An open list or "
+            "an unsuccessful search cannot prove exclusion.\n"
+            "Exclude general approval workflow, offer count, price arithmetic "
+            "and invoices."
         ),
         queries={
             "de": [
@@ -36,6 +43,8 @@ PROCUREMENT_RULES: list[Rule] = [
                 "Rahmenvertrag Produkte Rahmensortiment Bezugsverpflichtung Lieferant",
                 "Rahmenverträge Bestellungen WPS Katalogsystem",
                 "Rahmenvertrag Beschaffung Ausnahmen Bezug",
+                "Rahmenvertrag Produktgruppen Sortiment Beschaffungsgegenstände Bezugsweg",
+                "Rahmenvereinbarung Bezugsverpflichtung Produktgruppen Lieferweg Ausnahmen",
             ],
             "en": [
                 "university procurement mandatory framework agreement supplier ordering",
@@ -46,6 +55,7 @@ PROCUREMENT_RULES: list[Rule] = [
             "de": [
                 "Für welche Beschaffungsgegenstände gelten verbindliche Rahmenverträge, und wie sind diese zu beziehen?",
                 "Welche Vertragspartner und Bestellsysteme gelten für Produkte eines Rahmenvertrags?",
+                "Welche produktspezifischen Absätze folgen einer nur beispielhaften Liste (u.a.)?",
                 "Welche Ausnahmen oder Einschränkungen gelten für den Bezug über Rahmenverträge?",
             ],
             "en": [
@@ -59,3 +69,8 @@ PROCUREMENT_RULES: list[Rule] = [
 PROCUREMENT_RULES.extend(
     COMPARISON_OFFERS + AMOUNT_CALCULATION + DOCUMENT_CONSISTENCY + AWARD_SELECTION
 )
+
+# BEGIN UniAgent four procurement candidate rules
+from .procurement_extra import EXTRA_PROCUREMENT_RULES as _EXTRA_PROCUREMENT_RULES
+PROCUREMENT_RULES.extend(_EXTRA_PROCUREMENT_RULES)
+# END UniAgent four procurement candidate rules

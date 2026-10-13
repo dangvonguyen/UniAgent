@@ -1,5 +1,11 @@
 # Nhật ký tune năm rule mua sắm
 
+<!-- NINE_RULE_FINAL_START -->
+> **Cập nhật 13/10/2026 · lượt mới 9 quy tắc × 8 hồ sơ.** Đọc [báo cáo lượt chín quy tắc](NINE_RULE_REVIEW_20261013.md) trước các kết quả 5 quy tắc phía dưới. Bốn quy tắc từng gọi là “ứng viên” nay đã được định nghĩa và chạy; các đoạn bên dưới mô tả lịch sử đến 11/10. Lượt GPT mới khớp 8/8 nhãn công khai, nhưng 43/72 kết quả quy tắc là `unknown` và cả tám hồ sơ `degraded`. Các nhãn `angenommen` là kết quả không có `fail`, chưa chứng minh mọi quy tắc đều đạt. Tập tám hồ sơ đã dùng để tune. Mã kiểm PDF tạo các lý do từ chối của 04, 06, 07; rule hợp đồng khung tạo lý do từ chối của 03. Đây là kết quả tập phát triển với cache quote; chưa xác nhận chạy lạnh trong 300 giây hoặc tập ẩn.
+
+<!-- NINE_RULE_FINAL_END -->
+
+
 **Phạm vi:** tám `beschaffungsantrag-01…08` công khai, hồ sơ xin mua trước đặt hàng. Báo cáo này phân biệt ba loại phép đo: chạy model mới, replay câu trả lời cũ qua mã mới, và audit PDF bằng mã. Các verdict `pass/fail/not_applicable` là nghiệp vụ; `unknown` là lỗi kỹ thuật hoặc thiếu căn cứ.
 
 ## Trình tự thử nghiệm
@@ -70,3 +76,23 @@ Tài liệu gốc của các lượt thử, kể cả đường dẫn run cũ, n
 - Ba kết quả tổng hợp nằm trong [README chính](../README.md); [CASE_RESULTS.md](CASE_RESULTS.md) cho biết nguyên nhân theo case. Các báo cáo máy đọc được ở `evidence/matrix/`, `evidence/offline/`, `evidence/final/`.
 - Chín test tổng hợp sau sửa 11/10 kiểm các biến thể về giá, số báo giá, exception, source span và giai đoạn. Chúng không chứng minh recall của retrieval hoặc độ chính xác tập ẩn.
 - Cần rà nguồn luật đúng phạm vi rule 2–5, xử lý thiếu quote và endpoint gián đoạn, đo đường chạy lạnh trọn pipeline trong 300 giây/hồ sơ. Chưa có số đo của pipeline chính với Reflect trên procurement.
+
+## Cập nhật lượt chín quy tắc ngày 13/10/2026
+
+Bốn nhóm bổ sung (thẩm quyền đặt hàng, phân loại tài sản, thiết bị nghiên cứu đặc biệt, nhập khẩu ngoài EU) đã được định nghĩa và chạy cùng năm nhóm cũ. Lượt chạy dùng `gpt-oss-20b` và các gói quote luật đã chuẩn bị trước, trên tám hồ sơ công khai từng được dùng để tune. Mỗi hồ sơ có chín kết quả rule. Nhãn cuối khớp 8/8 nhãn công khai, nhưng đây là **kết quả tập phát triển**, không phải đánh giá trên tập ẩn. Cả tám hồ sơ `degraded`; trong 72 kết quả rule có 43 `unknown`, 19 `not_applicable`, 7 `pass`, 3 `fail`.
+
+| Rule | Đã làm và tín hiệu trên tám hồ sơ | Giới hạn hiện tại |
+| --- | --- | --- |
+| `framework_contract_sourcing` | Sửa giai đoạn xin mua, quote phạm vi hàng và kênh WPS; case 03 `fail` với đề xuất mua màn hình ngoài hợp đồng. | Kết luận `pass` ở 02/08 dựa vào danh sách `u.a.` mở nên quá chắc; 05 còn vấn đề tên trường/đối tác đã thay. |
+| `comparison_offers` | Nối ngoại lệ với loại hàng; case 06 `fail` vì hai báo giá thay vì ba, kèm audit hồ sơ. | 02 thiếu quote mua trực tiếp đúng phạm vi; `fail` phụ ở 03 còn cần rà. |
+| `amount_calculation` | Mã đối chiếu số tiền bắt 04: 2.400 so với 3.384 EUR net. | Kết quả LLM chủ yếu `unknown`; quote ngưỡng không tự tạo nghĩa vụ số học. |
+| `document_consistency` | Mã đối chiếu báo giá gốc và biên bản bắt 07: 2.350 bị chép thành 3.243 EUR net. | Digest không có quote nghĩa vụ; đây là audit tài liệu. |
+| `award_selection` | Cổng từ chối quote về công bố tiêu chí khi model suy phải chọn giá thấp nhất. | 8/8 `unknown`; thiếu nguồn nghĩa vụ thích hợp. |
+| `request_and_order_authority` | 4 `pass`, 4 `unknown`; quote về thẩm quyền đúng chủ đề. | Cần củng cố liên kết nghĩa vụ với chữ ký và giai đoạn. |
+| `asset_classification` | Thêm kiểm tra `Verbrauchsmaterial`/`GWG`/`Anlage`. | 8 `unknown`; nguồn có ngưỡng cũ/mới xung đột, thiếu metadata hiệu lực. |
+| `special_research_equipment_procedure` | Quote về thủ tục thiết bị nghiên cứu đã được tìm đúng chủ đề. | 8 `not_applicable`; chưa có hồ sơ dương tính để kiểm độ nhạy. |
+| `non_eu_import_procurement` | Quote về nhập khẩu ngoài EU đã được tìm đúng chủ đề. | 8 `not_applicable`; địa chỉ nhà cung cấp ở EU không tự chứng minh xuất xứ hàng. |
+
+Nhãn từ chối của 04 và 07 đến từ audit PDF bằng mã, của 06 từ rule báo giá và audit, của 03 từ rule hợp đồng khung. Bốn hồ sơ được chấp nhận vì không có `fail`, trong khi vẫn còn `unknown`. Dữ liệu thô của lượt chạy được giữ cục bộ tại `uniagent/runs/procurement/nine-final-20261013-120322/`; cache quote tại `uniagent/runs/procurement/nine-persistent-cache/`. Chúng không nằm trong phần mã/tài liệu đưa lên Git.
+
+Thời gian xử lý chậm nhất một hồ sơ là khoảng 172,5 giây khi dùng cache; lượt chạy lạnh bao gồm dựng chỉ mục và chọn quote chưa được xác nhận trong hạn 300 giây. Việc tune trên tám hồ sơ công khai có nguy cơ khớp quá mức; các rule mới chưa có case dương tính và cả chín rule chưa được kiểm trên tập ẩn.

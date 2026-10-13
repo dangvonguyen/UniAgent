@@ -87,13 +87,13 @@ def scope_errors(rule_id, links, refs, policy, documents) -> list[str]:
     return list(dict.fromkeys(errors))
 
 
-def stage_errors(rule_id, verdict, refs, policy, documents) -> list[str]:
+def stage_errors(rule_id, verdict, refs, policy, documents, answer=None) -> list[str]:
     """Check when an ordering duty attaches to a proposed purchase.
 
-    A request is not an executed order. A policy that expressly governs the
-    intent to order, however, may already constrain what can be proposed for
-    approval. This check only establishes timing; scope, evidence, and any
-    exceptions still need independent verification.
+    A request is not an executed order. A proposed source that is expressly
+    outside a cited mandatory procurement channel can already be reviewed at
+    the request stage. This check only establishes timing; independent source,
+    product-scope and exception checks still apply.
     """
     if rule_id != "framework_contract_sourcing" or verdict != "fail":
         return []
@@ -109,6 +109,63 @@ def stage_errors(rule_id, verdict, refs, policy, documents) -> list[str]:
                              r"bestell\w*\s+(?:woll\w*|m[oö]cht\w*|soll\w*)|"
                              r"(?:woll\w*|m[oö]cht\w*)\s+[^.]{0,80}\bbestell\w*)\b", cited)
     ordering_duty = re.search(r"(?i)\b(?:bestell\w*|order\w*)\b", cited)
-    if not executed and ordering_duty and not request_duty:
+    proposed_external_route = False
+    if answer is not None and ordering_duty:
+        mandatory_channel = re.search(
+            r"(?i)(?:Rahmenvertragspartner|Rahmenvertragsprodukt|"
+            r"Rahmenvertr[aä]g\w*|\bWPS\b|framework\s+(?:contract|supplier))",
+            cited,
+        )
+        departure = re.compile(
+            r"(?i)(?:https?://|\bwww\.|\bWebshop\b|\bohne\s+WPS\b|"
+            r"\bau[ßs]erhalb\s+(?:des\s+)?Rahmenvertrags\b)"
+        )
+        proposed_external_route = bool(mandatory_channel) and any(
+            departure.search(q.quote)
+            and (doc := documents.get(q.source.strip().upper())) is not None
+            and match_case_quote(q.quote, doc.text) is not None
+            for q in answer.case_quotes
+        )
+    if not executed and ordering_duty and not request_duty and not proposed_external_route:
         return ["ordering-duty-not-shown-due-at-request-stage"]
     return []
+
+
+def framework_provenance_errors(answer, documents) -> list[str]:
+    """A verified framework cart defeats a *name-only* off-contract claim.
+
+    Supplier names may be pseudonymised. A matching WPS cart and request
+    establish the case's claimed route, not that its contract is legally valid.
+    If the model cites an explicit contrary ordering route, let the ordinary
+    policy/scope checks decide it. An uncited name difference is insufficient
+    to reject a pre-order request that includes a coherent framework cart.
+    """
+    if answer.verdict != "fail":
+        return []
+
+    def cart_ids(text):
+        return {m.casefold() for m in re.findall(
+            r"(?i)\bWarenkorb\s+([A-Z0-9][A-Z0-9-]{4,})\b", text)}
+
+    carts = [doc for doc in documents.values()
+             if cart_ids(doc.text)
+             and re.search(r"(?i)\bWPS\b", doc.text)
+             and re.search(r"(?i)\bRahmenvertrag\w*\b", doc.text)
+             and re.search(r"(?i)Lieferant\s*\(Rahmenvertragspartner\)", doc.text)]
+    coherent = any(
+        cart_ids(cart.text) & cart_ids(request.text)
+        for cart in carts for request in documents.values()
+        if cart is not request and re.search(r"(?i)Abruf\s+aus\s+Rahmenvertrag", request.text)
+    )
+    if not coherent:
+        return []
+
+    departure = re.compile(
+        r"(?i)(?:https?://|\bwww\.|\bWebshop\b|\bPreisvergleich\b|"
+        r"\bohne\s+WPS\b|\bau[ßs]erhalb\s+(?:des\s+)?Rahmenvertrags\b)"
+    )
+    for quote in answer.case_quotes:
+        doc = documents.get(quote.source.strip().upper())
+        if doc and match_case_quote(quote.quote, doc.text) and departure.search(quote.quote):
+            return []
+    return ["framework-cart-conflicts-with-uncited-off-contract-claim"]
