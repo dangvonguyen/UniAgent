@@ -38,6 +38,8 @@ QUOTE_MAX_WIDEN_CHARS = 300  # max growth per side when widening a quote to sent
 # digest
 DIGEST_CONTEXT_K = 10  # excerpts handed to the LLM when resolving one rule
 DIGEST_MAX_DOC_CHARS = 3000
+DIGEST_DEADLINE_SECONDS = 150  # wall clock per rule; leaves room for the check inside 300 s
+CASE_DEADLINE_SECONDS = 300  # includes shared cold index/digest preparation
 
 # retrieval
 RETRIEVAL_DOCNO_META_LENGTH = 100

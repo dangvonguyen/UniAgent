@@ -3,14 +3,19 @@
 import argparse
 import asyncio
 import json
+import os
+import time
 from pathlib import Path
 from typing import Any
 
 from src.check import check_case, load_case
-from src.config import DEFAULT_MAX_TOKENS, RETRIEVAL_CORPORA_DIR, Settings
+from src.config import CASE_DEADLINE_SECONDS, DEFAULT_MAX_TOKENS, RETRIEVAL_CORPORA_DIR, Settings
 from src.digest import build_digest
+from src.policy_digest_cache import corpus_signature
 from src.llm import LLM
 from src.models import Decision, ResolvedRule, RuleVerdict
+from src.procurement_decision import procurement_audit_verdicts
+from src.procurement_scope_context import retain_retrieved_scope
 from src.retrieval import build_index
 from src.rules import RULES, TOPICS, CaseType, case_type_for
 from src.tracelog import Trace
@@ -33,7 +38,9 @@ def case_dirs(input_dir: Path) -> list[Path]:
 
 def _decision_answer(result: str, verdicts: list[RuleVerdict]) -> str:
     if result == "angenommen":
-        return "The application satisfies all checked rules."
+        if any(v.verdict == "unknown" for v in verdicts):
+            return "No verified rejection; provisional label with unresolved checks."
+        return "No verified rejection under the checked rules."
     reasons = "; ".join(v.reason for v in verdicts if v.verdict == "fail")
     return f"The application is rejected: {reasons}"
 
@@ -61,8 +68,10 @@ def _decision_evidence(verdicts: list[RuleVerdict]) -> list[dict[str, Any]]:
 
 
 async def decide_case(
-    case_dir: Path, rules: list[ResolvedRule], topic: str, llm: LLM, trace: Trace
+    case_dir: Path, rules: list[ResolvedRule], topic: str, llm: LLM, trace: Trace,
+    deadline: float | None = None,
 ) -> dict[str, Any]:
+    case_started = time.monotonic()
     with trace.case(case_dir.name):
         try:
             case = load_case(case_dir)
@@ -72,8 +81,45 @@ async def decide_case(
             raise
         trace.log("input", output={"documents": [d.name for d in case.documents]})
 
-        verdicts = await check_case(case, rules, topic, llm, trace)
+        audit: list[RuleVerdict] = []
+        if case_type_for(case.case_id) == "procurement":
+            audit = procurement_audit_verdicts(
+                case_dir, rules, trace, {d.name: d.text for d in case.documents})
+        if deadline is None:
+            verdicts = await check_case(case, rules, topic, llm, trace)
+        else:
+            # All rule tasks receive the same remaining case budget. Completed
+            # rules survive a timeout; unfinished ones become technical gaps.
+            tasks = [asyncio.create_task(check_case(case, [r], topic, llm, trace))
+                     for r in rules]
+            remaining = max(0, deadline - time.monotonic())
+            done, pending = await asyncio.wait(tasks, timeout=remaining)
+            for task in pending:
+                task.cancel()
+            if pending:
+                await asyncio.gather(*pending, return_exceptions=True)
+            verdicts = []
+            for rule, task in zip(rules, tasks, strict=True):
+                if task in pending:
+                    reason = "rule_error: case_deadline_exceeded"
+                    verdicts.append(RuleVerdict(rule_id=rule.rule.id,
+                                                verdict="unknown", reason=reason))
+                else:
+                    try:
+                        verdicts.append(task.result()[0])
+                    except Exception as exc:
+                        verdicts.append(RuleVerdict(rule_id=rule.rule.id,
+                            verdict="unknown", reason=f"rule_error: {type(exc).__name__}: {exc}"))
+        rule_results = [v.model_dump(mode="json") for v in verdicts]
+        verdicts.extend(audit)
         failed = any(v.verdict == "fail" for v in verdicts)
+        unresolved = [v.rule_id for v in verdicts if v.verdict == "unknown"]
+        if unresolved and not failed:
+            # Fallback label, not a business verdict: keep it visible in the trace.
+            trace.log("observation", tool="decision_fallback", output={
+                "label": "angenommen", "unresolved_rules": unresolved,
+                "reasons": {v.rule_id: v.reason for v in verdicts if v.verdict == "unknown"},
+            })
         decision = Decision(
             case_id=case.case_id,
             result="abgelehnt" if failed else "angenommen",
@@ -83,6 +129,11 @@ async def decide_case(
             "decision",
             output={
                 "decision": decision.result,
+                "degraded": bool(unresolved),
+                "case_elapsed_seconds": round(time.monotonic() - case_started, 3),
+                "technical_rule_gaps": unresolved,
+                "rule_results": rule_results,
+                "audit_results": [v.model_dump(mode="json") for v in audit],
                 "answer": _decision_answer(decision.result, verdicts),
                 "evidence": _decision_evidence(verdicts),
             },
@@ -113,6 +164,7 @@ async def main() -> None:
         case_types = list({case_type_for(case_dir.name) for case_dir in cases})
 
         # Phase 1: build the retrieval index over the mounted corpora.
+        signature = await asyncio.to_thread(corpus_signature, corpora_root)
         index = await build_index(corpora_root)
 
         llm = LLM(
@@ -127,39 +179,33 @@ async def main() -> None:
         # all cases. Each rule traces under its own case_id.
         resolved = await asyncio.gather(
             *(
-                build_digest(RULES[case_type], TOPICS[case_type], index, llm, trace)
+                build_digest(RULES[case_type], TOPICS[case_type], index, llm, trace,
+                             cache_signature=signature, model_name=settings.openai_model,
+                             require_warm=os.getenv("UNIAGENT_REQUIRE_WARM") == "1")
                 for case_type in case_types
             )
         )
         rules: dict[CaseType, list[ResolvedRule]] = dict(zip(case_types, resolved))
+        if 'procurement' in rules:
+            await retain_retrieved_scope(rules['procurement'], index, trace)
 
         # Phase 3: decide each case against its domain's resolved rules, concurrently.
         print(f"Deciding {len(cases)} case(s)...", flush=True)
 
-        async def _decide_indexed(i: int, case_dir: Path) -> tuple[int, dict[str, Any]]:
+        # Leave time for cancelled requests, trace flushing and the prediction
+        # write. The entire decision, including that overhead, must fit 300 s.
+        # Shared corpus preparation is reported separately in the warm-cache step.
+        for case_dir in cases:
+            case_started = time.monotonic()
             case_type = case_type_for(case_dir.name)
-            return i, await decide_case(
-                case_dir, rules[case_type], TOPICS[case_type], llm, trace
+            prediction = await decide_case(
+                case_dir, rules[case_type], TOPICS[case_type], llm, trace,
+                case_started + max(0, CASE_DEADLINE_SECONDS - 15),
             )
-
-        tasks = [
-            asyncio.create_task(_decide_indexed(i, case_dir))
-            for i, case_dir in enumerate(cases)
-        ]
-        results: list[dict[str, Any] | None] = [None] * len(cases)
-        try:
-            for coro in asyncio.as_completed(tasks):
-                i, prediction = await coro
-                results[i] = prediction
-                print(f"  {cases[i].name}: {prediction['result']}", flush=True)
-        except BaseException:
-            for task in tasks:
-                task.cancel()
-            await asyncio.gather(*tasks, return_exceptions=True)
-            raise
-        for result in results:
-            assert result is not None
-            predictions.write(json.dumps(result, ensure_ascii=False) + "\n")
+            predictions.write(json.dumps(prediction, ensure_ascii=False) + "\n")
+            predictions.flush()
+            print(f"  {case_dir.name}: {prediction['result']} "
+                  f"({time.monotonic() - case_started:.1f}s)", flush=True)
 
     print(f"Done. Predictions written to {predictions_path}", flush=True)
 

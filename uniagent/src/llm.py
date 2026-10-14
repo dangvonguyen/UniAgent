@@ -86,6 +86,17 @@ class LLM:
                     max_output_tokens=self._max_tokens,
                 )
             except Exception as err:  # noqa: BLE001
+                # A billing refusal happens before model generation. Retrying
+                # the same reservation cannot repair it and can spam the
+                # endpoint. Preserve retries for transient transport errors.
+                if getattr(err, "status_code", None) == 402:
+                    message = ("HTTP 402: insufficient API credit for the requested "
+                               f"max_output_tokens={self._max_tokens}; no retry")
+                    _log(context, attempt, message)
+                    self._trace.log(
+                        "error", input=log_input, status="error", error=message
+                    )
+                    raise RuntimeError(message) from err
                 last_error = str(err)
                 _log(
                     context,
@@ -158,13 +169,13 @@ class LLM:
 
         print(
             f"  [llm] {context + ' ' if context else ''}giving up after "
-            f"{LLM_COMPLETION_ATTEMPTS} attempt(s): {last_error}; returning empty answer",
+            f"{LLM_COMPLETION_ATTEMPTS} attempt(s): {last_error}; raising error",
             flush=True,
         )
         self._trace.log(
             "error",
             input=log_input,
             status="error",
-            error=last_error or "LLM call failed after retries; return empty answer.",
+            error=last_error or "LLM call failed after retries.",
         )
-        return schema()
+        raise RuntimeError(last_error or "LLM call failed after retries")

@@ -1,4 +1,4 @@
-# Nhật ký tune năm rule mua sắm
+# Nhật ký tune quy tắc mua sắm (từ 5 lên 9)
 
 <!-- NINE_RULE_FINAL_START -->
 > **Cập nhật 13/10/2026 · lượt mới 9 quy tắc × 8 hồ sơ.** Đọc [báo cáo lượt chín quy tắc](NINE_RULE_REVIEW_20261013.md) trước các kết quả 5 quy tắc phía dưới. Bốn quy tắc từng gọi là “ứng viên” nay đã được định nghĩa và chạy; các đoạn bên dưới mô tả lịch sử đến 11/10. Lượt GPT mới khớp 8/8 nhãn công khai, nhưng 43/72 kết quả quy tắc là `unknown` và cả tám hồ sơ `degraded`. Các nhãn `angenommen` là kết quả không có `fail`, chưa chứng minh mọi quy tắc đều đạt. Tập tám hồ sơ đã dùng để tune. Mã kiểm PDF tạo các lý do từ chối của 04, 06, 07; rule hợp đồng khung tạo lý do từ chối của 03. Đây là kết quả tập phát triển với cache quote; chưa xác nhận chạy lạnh trong 300 giây hoặc tập ẩn.
@@ -96,3 +96,11 @@ Bốn nhóm bổ sung (thẩm quyền đặt hàng, phân loại tài sản, thi
 Nhãn từ chối của 04 và 07 đến từ audit PDF bằng mã, của 06 từ rule báo giá và audit, của 03 từ rule hợp đồng khung. Bốn hồ sơ được chấp nhận vì không có `fail`, trong khi vẫn còn `unknown`. Dữ liệu thô của lượt chạy được giữ cục bộ tại `uniagent/runs/procurement/nine-final-20261013-120322/`; cache quote tại `uniagent/runs/procurement/nine-persistent-cache/`. Chúng không nằm trong phần mã/tài liệu đưa lên Git.
 
 Thời gian xử lý chậm nhất một hồ sơ là khoảng 172,5 giây khi dùng cache; lượt chạy lạnh bao gồm dựng chỉ mục và chọn quote chưa được xác nhận trong hạn 300 giây. Việc tune trên tám hồ sơ công khai có nguy cơ khớp quá mức; các rule mới chưa có case dương tính và cả chín rule chưa được kiểm trên tập ẩn.
+
+## Kiểm tra image tích hợp ngày 14/10/2026
+
+Image build thành công từ `uniagent/` ở gốc. Kiểm tra khi tắt mạng xác nhận
+pipeline import được đủ 9 quy tắc mua sắm và PyTerrier khởi động bằng Java helper
+đã lưu trong image. Lượt kiểm này không gọi GPT và không chạy 8 hồ sơ.
+Kết quả 8/8 đã báo cáo ở trên thuộc lượt chạy tập phát triển trước các sửa đổi
+tích hợp mới; chưa được xác nhận lại bằng image này.

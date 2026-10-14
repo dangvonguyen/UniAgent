@@ -22,7 +22,8 @@ class PolicyQuote(BaseModel):
 
 class ResolvedRule(BaseModel):
     rule: Rule
-    quotes: list[PolicyQuote]  # [] = looked up, nothing found
+    quotes: list[PolicyQuote]  # [] with no error = looked up, nothing found
+    error: str = ""  # non-empty = the lookup itself failed (timeout, LLM error)
 
 
 class CaseDocument(BaseModel):

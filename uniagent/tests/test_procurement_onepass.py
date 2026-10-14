@@ -15,11 +15,17 @@ from src.rules.procurement import PROCUREMENT_RULES
 
 
 class ProcurementOnePassTests(unittest.TestCase):
-    def test_five_rules_are_registered_once(self):
-        self.assertEqual([r.id for r in PROCUREMENT_RULES], [
+    def test_nine_rules_are_registered_once(self):
+        ids = [r.id for r in PROCUREMENT_RULES]
+        self.assertEqual(ids[:5], [
             "framework_contract_sourcing", "comparison_offers",
             "amount_calculation", "document_consistency", "award_selection",
         ])
+        self.assertEqual(ids[5:], [
+            "request_and_order_authority", "asset_classification",
+            "special_research_equipment_procedure", "non_eu_import_procurement",
+        ])
+        self.assertEqual(len(set(ids)), 9)
 
     def test_arithmetic_mutations_and_partial_table(self):
         table = ("3. Positionen\nPos Bezeichnung Menge EP netto GP netto\n"

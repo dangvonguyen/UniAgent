@@ -1,5 +1,6 @@
 """Quote verification: tying a model's quote to the exact text of its source."""
 
+import re
 from collections.abc import Callable
 
 from rapidfuzz import fuzz
@@ -29,6 +30,39 @@ def match_case_quote(quote: str | None, source: str) -> str | None:
     text = normalize_text(source)
     span = _locate(quote, text, keep=str.isalnum, fuzzy=False)
     return None if span is None else text[span[0] : span[1]]
+
+
+def match_case_parts(quote: str | None, source: str) -> list[str]:
+    """Recover a short ellipsis citation as separate, real PDF excerpts.
+
+    Each part must match exactly after character/whitespace normalization,
+    occur in order, and lie within a six-line window. We never join the
+    pieces into a fabricated contiguous quotation.
+    """
+    direct = match_case_quote(quote, source)
+    if direct is not None:
+        return [direct]
+    if not quote or not re.search(r"(?:\.\.\.|…)", quote):
+        return []
+    parts = re.split(r"(?:\.\.\.|…)", quote)
+    if not 2 <= len(parts) <= 3 or any(
+            sum(c.isalnum() for c in part) < 14 for part in parts):
+        return []
+    text = normalize_text(source)
+    found = []
+    last = 0
+    first = None
+    for part in parts:
+        span = _locate(part, text, keep=str.isalnum, fuzzy=False)
+        if span is None or span[0] < last:
+            return []
+        if first is None:
+            first = span[0]
+        if text[first:span[1]].count("\n") > 6:
+            return []
+        found.append(text[span[0]:span[1]])
+        last = span[1]
+    return found
 
 
 def _locate(
