@@ -368,6 +368,44 @@ def stage_existing_runs(paths: list[DatasetPaths]) -> None:
         atomic_copy(item.old_source, item.old_run)
 
 
+def archive_stale_pool_artifacts(item: DatasetPaths, pool_depth: int) -> Path:
+    """Move reproducible stale artifacts aside while retaining judge responses."""
+    judgments = item.judgments.resolve()
+    timestamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
+    archive = judgments / "archive" / f"stale-pool-{timestamp}"
+    suffix = 1
+    while archive.exists():
+        archive = judgments / "archive" / f"stale-pool-{timestamp}-{suffix}"
+        suffix += 1
+
+    candidates = (
+        judgments / "pools" / f"top-{pool_depth}-pool.json",
+        judgments / "pools" / f"top-{pool_depth}-pool.manifest.json",
+        judgments / "requests",
+        judgments / "review.csv",
+        judgments / "qrels.txt",
+    )
+    moved = False
+    for source in candidates:
+        source = source.resolve()
+        if not source.exists():
+            continue
+        if not source.is_relative_to(judgments):
+            raise ValueError(f"Refusing to archive path outside judgments: {source}")
+        destination = archive / source.relative_to(judgments)
+        destination.parent.mkdir(parents=True, exist_ok=True)
+        shutil.move(str(source), str(destination))
+        moved = True
+    if not moved:
+        raise ValueError(f"Stale pool was reported but no artifacts exist in {judgments}")
+    print(
+        f"Archived stale pool artifacts for {item.name} at {archive}. "
+        "Existing UMBRELA responses were retained.",
+        flush=True,
+    )
+    return archive
+
+
 async def build_new_runs(
     paths: list[DatasetPaths], *, retrieval_depth: int, run_depth: int, rrf_k: int
 ) -> dict[str, dict[str, Any]]:
@@ -618,6 +656,51 @@ def audit_parser_versions(
     return counts
 
 
+def reusable_response_pairs(
+    item: DatasetPaths,
+    pool: dict[str, list[str]],
+    seed: dict[str, dict[str, int]],
+    *,
+    parser_version: str,
+) -> set[tuple[str, str]]:
+    """Find pool pairs whose persisted response can be reused without an API call."""
+    reusable: set[tuple[str, str]] = set()
+    responses = item.judgments / "responses"
+    if not responses.is_dir():
+        return reusable
+    wanted = {str(qid): set(docnos) for qid, docnos in pool.items()}
+    for response_path in responses.glob("*.json"):
+        response = json.loads(response_path.read_text(encoding="utf-8-sig"))
+        qid = str(response.get("qid", ""))
+        if qid not in wanted:
+            continue
+        judgments = response.get("judgments")
+        if not isinstance(judgments, list):
+            continue
+        for row in judgments:
+            if not isinstance(row, dict):
+                continue
+            docno = str(row.get("docno", ""))
+            label = row.get("judgment")
+            judge = row.get("judge")
+            if (
+                docno not in wanted[qid]
+                or isinstance(label, bool)
+                or not isinstance(label, int)
+                or label not in range(4)
+                or not isinstance(judge, dict)
+            ):
+                continue
+            if docno in seed.get(qid, {}):
+                reusable.add((qid, docno))
+                continue
+            if judge.get("source") == "seed-qrels":
+                continue
+            if str(judge.get("parser_version", "")) == parser_version:
+                reusable.add((qid, docno))
+    return reusable
+
+
 def prepare_and_judge(
     paths: list[DatasetPaths],
     evaluator: Evaluator,
@@ -634,33 +717,53 @@ def prepare_and_judge(
 
     for item in paths:
         runs_root = item.new_run.parents[1]
-        pool = evaluator.get_pool(
-            runs_root,
-            pool_depth,
-            item.judgments / "pools",
-        )
+        try:
+            pool = evaluator.get_pool(
+                runs_root,
+                pool_depth,
+                item.judgments / "pools",
+            )
+        except ValueError as error:
+            if "Existing pool is stale" not in str(error):
+                raise
+            archive_stale_pool_artifacts(item, pool_depth)
+            pool = evaluator.get_pool(
+                runs_root,
+                pool_depth,
+                item.judgments / "pools",
+                force=True,
+            )
         evaluator.prepare_requests(item.dataset, pool, item.judgments)
         seed = evaluator.load_qrels(item.seed_qrels)
-        pooled_pairs = sum(len(docnos) for docnos in pool.values())
-        reused_pairs = sum(
-            docno in seed.get(qid, {})
-            for qid, docnos in pool.items()
-            for docno in docnos
+        pool_pairs = {
+            (str(qid), docno) for qid, docnos in pool.items() for docno in docnos
+        }
+        seeded_pairs = {
+            pair for pair in pool_pairs if pair[1] in seed.get(pair[0], {})
+        }
+        response_pairs = reusable_response_pairs(
+            item,
+            pool,
+            seed,
+            parser_version=evaluator.parser_version,
         )
-        new_pairs = pooled_pairs - reused_pairs
+        response_only_pairs = response_pairs - seeded_pairs
+        new_pairs = len(pool_pairs - seeded_pairs - response_pairs)
         total_new_pairs += new_pairs
         metadata[item.name] = {
             "pool_depth": pool_depth,
-            "pool_pairs": pooled_pairs,
-            "seed_pairs_reused": reused_pairs,
+            "pool_pairs": len(pool_pairs),
+            "seed_pairs_reused": len(seeded_pairs),
+            "response_pairs_reused": len(response_only_pairs),
             "new_pairs_for_umbrela": new_pairs,
             "seed_qrels": str(item.seed_qrels),
             "judgments": str(item.judgments),
         }
         states.append((item, pool, seed))
         print(
-            f"Prepared {item.name}: {pooled_pairs} pooled pairs, "
-            f"{reused_pairs} seeded, {new_pairs} for UMBRELA.",
+            f"Prepared {item.name}: {len(pool_pairs)} pooled pairs, "
+            f"{len(seeded_pairs)} seeded, {len(response_only_pairs)} from existing "
+            f"responses, {new_pairs} for UMBRELA.",
             flush=True,
         )
 
