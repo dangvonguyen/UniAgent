@@ -29,6 +29,8 @@ LLM_TOP_P = 1.0
 LLM_REASONING_EFFORT = "medium"
 LLM_MAX_CONCURRENCY = 8
 
+FACTS_REASONING_EFFORT = "low"  # extraction reads, it does not judge
+
 # quote matching
 QUOTE_MATCH_MIN_SCORE = 90  # rapidfuzz partial_ratio, 0-100
 QUOTE_MATCH_MIN_CHARS = 30  # shorter quotes must match exactly

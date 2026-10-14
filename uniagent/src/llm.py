@@ -58,13 +58,27 @@ class LLM:
         self._semaphore = asyncio.Semaphore(LLM_MAX_CONCURRENCY)
 
     async def complete_json(
-        self, system: str, user: str, schema: type[M], *, context: str = ""
+        self,
+        system: str,
+        user: str,
+        schema: type[M],
+        *,
+        context: str = "",
+        reasoning_effort: str = LLM_REASONING_EFFORT,
     ) -> M:
         async with self._semaphore:
-            return await self._complete_json(system, user, schema, context=context)
+            return await self._complete_json(
+                system, user, schema, context=context, reasoning_effort=reasoning_effort
+            )
 
     async def _complete_json(
-        self, system: str, user: str, schema: type[M], *, context: str = ""
+        self,
+        system: str,
+        user: str,
+        schema: type[M],
+        *,
+        context: str,
+        reasoning_effort: str,
     ) -> M:
         messages: ResponseInputParam = [
             {"role": "system", "content": system},
@@ -82,7 +96,7 @@ class LLM:
                     input=messages,
                     temperature=LLM_TEMPERATURE,
                     top_p=LLM_TOP_P,
-                    reasoning={"effort": LLM_REASONING_EFFORT},
+                    reasoning={"effort": reasoning_effort},
                     max_output_tokens=self._max_tokens,
                 )
             except Exception as err:  # noqa: BLE001
