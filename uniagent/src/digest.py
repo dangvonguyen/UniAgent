@@ -6,7 +6,13 @@ from html import escape
 
 from pydantic import BaseModel
 
-from .config import DIGEST_CONTEXT_K, RETRIEVAL_DEPTH
+from .config import (
+    DIGEST_CONTEXT_K,
+    GTE_RERANK_DEPTH,
+    RETRIEVAL_DEPTH,
+    RETRIEVAL_GTE_WEIGHT,
+    RETRIEVAL_SPARSE_WEIGHT,
+)
 from .llm import LLM
 from .models import PolicyQuote, ResolvedRule, Rule
 from .quotes import match_policy_quote
@@ -120,7 +126,12 @@ async def _retrieve(rule: Rule, index: CorpusIndex, trace: Trace) -> LabeledHits
         input={
             "queries": rule.queries,
             "questions": rule.questions,
-            "depth": RETRIEVAL_DEPTH,
+            "sparse_depth": RETRIEVAL_DEPTH,
+            "gte_rerank_depth": GTE_RERANK_DEPTH,
+            "fusion_weights": {
+                "sparse": RETRIEVAL_SPARSE_WEIGHT,
+                "gte": RETRIEVAL_GTE_WEIGHT,
+            },
         },
     )
     hits = await index.search(rule.queries, rule.questions, depth=RETRIEVAL_DEPTH)
@@ -133,7 +144,7 @@ async def _retrieve(rule: Rule, index: CorpusIndex, trace: Trace) -> LabeledHits
                 {
                     "corpus": hit.passage.corpus,
                     "passage_id": hit.passage.passage_id,
-                    "rrf_score": hit.score,
+                    "weighted_rrf_score": hit.score,
                 }
                 for hit in top
             ],

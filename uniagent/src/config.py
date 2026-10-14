@@ -44,12 +44,24 @@ RETRIEVAL_DOCNO_META_LENGTH = 100
 RETRIEVAL_DEPTH = 100  # hits per (query, corpus) pair, before fusion
 RETRIEVAL_RRF_K = 60
 RETRIEVAL_WMODEL = "BM25"
+RETRIEVAL_SPARSE_WEIGHT = 0.3
+RETRIEVAL_GTE_WEIGHT = 0.7
 
-# dense
+# GTE reranking (the model and revisions used by the reference pipeline)
+GTE_MODEL = "Alibaba-NLP/gte-multilingual-reranker-base"
+GTE_MODEL_REVISION = "8215cf04918ba6f7b6a62bb44238ce2953d8831c"
+GTE_CODE_REVISION = "40ced75c3017eb27626c9d4ea981bde21a2662f4"
+GTE_RERANK_DEPTH = 20
+GTE_BATCH_SIZE = 4
+GTE_MAX_LENGTH = 1024
+
+# Kept for the standalone, untracked retrieval comparison utility. Production
+# retrieval no longer builds or queries this dense index.
 DENSE_MODEL = "sentence-transformers/static-similarity-mrl-multilingual-v1"
 DENSE_BATCH_SIZE = 256
 
-# passages
+# Semantic recursive passages: paragraph/line/sentence boundaries, no overlap.
+# The target and hard maximum bracket roughly 300 words for policy prose.
 PASSAGE_TARGET_CHARS = 1500
 PASSAGE_MAX_CHARS = 2500
 PASSAGE_MIN_STANDALONE_BLOCK_CHARS = 100

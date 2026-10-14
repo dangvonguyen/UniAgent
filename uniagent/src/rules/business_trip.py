@@ -2,8 +2,8 @@ from src.models import Rule
 
 # Queries are BM25 keyword bags fused by reciprocal rank, so each rule gets several
 # short queries, one per facet , instead of one long query that dilutes every term.
-# Questions are natural-language questions the policy text answers, for dense retrieval
-# and reranking, which match sentences rather than keywords.
+# Questions are natural-language questions the policy text answers. GTE uses them
+# to rerank the top BM25 chunks, matching complete sentences rather than keywords.
 
 BUSINESS_TRIP_RULES: list[Rule] = [
     Rule(

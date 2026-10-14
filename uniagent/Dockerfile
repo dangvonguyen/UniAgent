@@ -13,8 +13,7 @@ COPY requirements.txt /app/requirements.txt
 RUN pip3 install --no-cache-dir torch --index-url https://download.pytorch.org/whl/cpu
 RUN pip3 install --no-cache-dir --requirement /app/requirements.txt
 
-RUN python3 -c "from sentence_transformers import CrossEncoder; CrossEncoder('BAAI/bge-reranker-v2-m3')"
-RUN python3 -c "from sentence_transformers import SentenceTransformer; SentenceTransformer('sentence-transformers/static-similarity-mrl-multilingual-v1')"
+RUN python3 -c "from huggingface_hub import snapshot_download; snapshot_download('Alibaba-NLP/gte-multilingual-reranker-base', revision='8215cf04918ba6f7b6a62bb44238ce2953d8831c')"
 
 COPY resources src predict.py /app/
 RUN chmod +x /app/predict.py
