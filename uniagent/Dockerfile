@@ -10,7 +10,7 @@ RUN apt-get update \
 
 COPY requirements.txt /app/requirements.txt
 
-RUN pip3 install --no-cache-dir torch --index-url https://download.pytorch.org/whl/cpu
+RUN pip3 install --no-cache-dir torch==2.9.1 --index-url https://download.pytorch.org/whl/cpu
 RUN pip3 install --no-cache-dir --requirement /app/requirements.txt
 
 RUN python3 -c "from huggingface_hub import snapshot_download; snapshot_download('Alibaba-NLP/gte-multilingual-reranker-base', revision='8215cf04918ba6f7b6a62bb44238ce2953d8831c')"

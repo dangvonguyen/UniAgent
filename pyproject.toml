@@ -11,8 +11,10 @@ dependencies = [
     "pysbd>=0.3.4",
     "pyterrier[all]>=1.1.2",
     "rapidfuzz>=3.14.6",
-    "sentence-transformers>=6.1.0",
+    "sentence-transformers==5.1.2",
     "tira>=0.0.205",
+    "torch==2.9.1",
+    "transformers==4.57.3",
 ]
 
 [dependency-groups]

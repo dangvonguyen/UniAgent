@@ -3,5 +3,7 @@ openai>=3.15.0
 pydantic>=2.13.5
 pysbd>=0.3.4
 pyterrier[all]>=1.1.2
-sentence-transformers>=6.1.0
+sentence-transformers==5.1.2
+torch==2.9.1
+transformers==4.57.3
 rapidfuzz>=3.14.6
