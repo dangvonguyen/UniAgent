@@ -18,6 +18,7 @@ class PolicyQuote(BaseModel):
     corpus: str
     doc_id: str
     quote: str  # verified verbatim against the retrieved document
+    title: str = ""  # the law or page the quote comes from
 
 
 class ResolvedRule(BaseModel):

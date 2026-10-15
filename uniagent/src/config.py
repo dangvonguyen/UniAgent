@@ -40,6 +40,9 @@ QUOTE_MAX_WIDEN_CHARS = 300  # max growth per side when widening a quote to sent
 # digest
 DIGEST_CONTEXT_K = 10  # excerpts handed to the LLM when resolving one rule
 DIGEST_MAX_DOC_CHARS = 3000
+# "passages": the LLM picks relevant excerpts, which reach the case check whole;
+# "quotes": the LLM copies the relevant sentences out of them.
+DIGEST_MODE = "passages"
 
 # retrieval
 RETRIEVAL_DOCNO_META_LENGTH = 100
