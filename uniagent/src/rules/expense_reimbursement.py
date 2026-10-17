@@ -3,11 +3,15 @@ from src.models import Rule
 EXPENSE_REIMBURSEMENT_RULES: list[Rule] = [
     Rule(
         id="cost_purpose",
-        check=(
-            "Subject: the work-related purpose of each claimed cost: was it incurred for the institution's work rather than privately?\n"
-            "Policy: the provisions that let employees pay costs themselves and have them reimbursed, given whole with their conditions and exceptions, including what they say or imply about whom and for what such costs must be incurred, and what the policy requires the claim or its receipts to state or show about that purpose.\n"
-            "Compare: what each claimed cost was incurred for, against what these provisions require of the purpose of reimbursable costs, whether they state it or it follows from whom and for whom they let costs be advanced. Where the provisions say how the purpose must be stated or shown, apply that requirement as written. Where they say nothing about it, judge from the case documents as a whole: a fact they neither show nor contradict decides nothing by itself, and the verdict rests on what they do show.\n"
-            "Out of scope, never a reason to fail this rule even where the provisions regulate it: how the purchase should have been ordered and whether it was eligible to be paid privately; which categories of costs are excluded from reimbursement or restricted to certain occasions or beneficiaries; whether the receipt is a final invoice; whether the same order was claimed more than once; the cost amounts; the submission procedure (forms, systems, deadlines)."
+        subject="Was each claimed cost incurred for the institution's work, as opposed to the applicant's private use?",
+        policy=(
+            "- provisions on whose costs employees may pay themselves and have reimbursed, and what they state or imply about the work or purpose such costs must serve\n"
+            "- provisions on what the claim or its receipts must state or show about the purpose of a cost"
+        ),
+        compare=(
+            "- Establish what each claimed cost was incurred for from what the case documents show: the items, the addressee, the delivery address, any note of the applicant, and whether anything in them links the cost to the institution or its work. That the applicant paid from their own account is common to every such claim and says nothing about purpose.\n"
+            "- Compare it with what the policy requires of the purpose of reimbursable costs: what it states, or what follows from whose costs it has employees advance and have reimbursed.\n"
+            "- Conditions on when a cost may be advanced at all are other subjects. A cost that misses them can still have been incurred for the institution's work, and one that meets them can still be private."
         ),
         queries={
             "de": [

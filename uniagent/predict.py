@@ -10,7 +10,7 @@ from src.check import check_case, load_case
 from src.config import DEFAULT_MAX_TOKENS, RETRIEVAL_CORPORA_DIR, Settings
 from src.digest import build_digest
 from src.llm import LLM
-from src.models import Decision, ResolvedRule, RuleVerdict
+from src.models import Decision, ResolvedRule, Rule, RuleVerdict
 from src.retrieval import build_index
 from src.rules import RULES, TOPICS, CaseType, case_type_for
 from src.tracelog import Trace
@@ -61,7 +61,12 @@ def _decision_evidence(verdicts: list[RuleVerdict]) -> list[dict[str, Any]]:
 
 
 async def decide_case(
-    case_dir: Path, rules: list[ResolvedRule], topic: str, llm: LLM, trace: Trace
+    case_dir: Path,
+    rules: list[ResolvedRule],
+    topic_rules: list[Rule],
+    topic: str,
+    llm: LLM,
+    trace: Trace,
 ) -> dict[str, Any]:
     with trace.case(case_dir.name):
         try:
@@ -72,7 +77,7 @@ async def decide_case(
             raise
         trace.log("input", output={"documents": [d.name for d in case.documents]})
 
-        verdicts = await check_case(case, rules, topic, llm, trace)
+        verdicts = await check_case(case, rules, topic_rules, topic, llm, trace)
         failed = any(v.verdict == "fail" for v in verdicts)
         decision = Decision(
             case_id=case.case_id,
@@ -95,6 +100,12 @@ async def main() -> None:
     parser.add_argument("--input", type=Path, required=True)
     parser.add_argument("--output", type=Path, required=True)
     parser.add_argument("--max-tokens", type=int, default=DEFAULT_MAX_TOKENS)
+    parser.add_argument(
+        "--rules",
+        nargs="+",
+        metavar="ID",
+        help="run only these rules (default: all); the others count as other rules in the check",
+    )
     args = parser.parse_args()
     args.output.mkdir(parents=True, exist_ok=True)
 
@@ -125,9 +136,22 @@ async def main() -> None:
 
         # Phase 2: resolve the policy quotes of every rule of the domains, shared across
         # all cases. Each rule traces under its own case_id.
+        selected = {
+            case_type: [
+                rule
+                for rule in RULES[case_type]
+                if not args.rules or rule.id in args.rules
+            ]
+            for case_type in case_types
+        }
+        unknown = set(args.rules or []) - {
+            rule.id for rules in selected.values() for rule in rules
+        }
+        if unknown:
+            raise SystemExit(f"No rules of {case_types} match {sorted(unknown)}")
         resolved = await asyncio.gather(
             *(
-                build_digest(RULES[case_type], TOPICS[case_type], index, llm, trace)
+                build_digest(selected[case_type], TOPICS[case_type], index, llm, trace)
                 for case_type in case_types
             )
         )
@@ -139,7 +163,12 @@ async def main() -> None:
         async def _decide_indexed(i: int, case_dir: Path) -> tuple[int, dict[str, Any]]:
             case_type = case_type_for(case_dir.name)
             return i, await decide_case(
-                case_dir, rules[case_type], TOPICS[case_type], llm, trace
+                case_dir,
+                rules[case_type],
+                RULES[case_type],
+                TOPICS[case_type],
+                llm,
+                trace,
             )
 
         tasks = [

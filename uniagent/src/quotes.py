@@ -1,5 +1,6 @@
 """Quote verification: tying a model's quote to the exact text of its source."""
 
+import re
 from collections.abc import Callable
 
 from rapidfuzz import fuzz
@@ -29,6 +30,47 @@ def match_case_quote(quote: str | None, source: str) -> str | None:
     text = normalize_text(source)
     span = _locate(quote, text, keep=str.isalnum, fuzzy=False)
     return None if span is None else text[span[0] : span[1]]
+
+
+def match_case_quote_parts(quote: str | None, source: str) -> list[str] | None:
+    """Return matching parts of the source text for a case quote, or None.
+
+    If the full quote appears in the source, return it. Otherwise, split the
+    quote at line breaks and ellipses, match each part separately, and merge
+    parts that appear next to each other in the source.
+    """
+    text = normalize_text(source)
+    span = _locate(quote, text, keep=str.isalnum, fuzzy=False)
+    if span is not None:
+        return [text[span[0] : span[1]]]
+
+    pieces = [
+        piece
+        for piece in re.split(r"\n|\.{3}|…", normalize_text(quote or ""))
+        if any(char.isalnum() for char in piece)
+    ]
+    if len(pieces) < 2:
+        return None
+
+    spans: list[tuple[int, int]] = []
+    for piece in pieces:
+        span = _locate(piece, text, keep=str.isalnum, fuzzy=False)
+        if span is None:
+            return None
+        spans.append(span)
+
+    return [text[first:last] for first, last in _join_adjacent(text, spans)]
+
+
+def _join_adjacent(text: str, spans: list[tuple[int, int]]) -> list[tuple[int, int]]:
+    """Spans in source order, overlapping ones or ones apart only by whitespace joined."""
+    joined: list[tuple[int, int]] = []
+    for first, last in sorted(spans):
+        if joined and not text[joined[-1][1] : first].strip():
+            joined[-1] = (joined[-1][0], max(joined[-1][1], last))
+        else:
+            joined.append((first, last))
+    return joined
 
 
 def _locate(
