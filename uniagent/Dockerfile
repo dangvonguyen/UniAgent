@@ -16,7 +16,10 @@ RUN pip3 install --no-cache-dir --requirement /app/requirements.txt
 RUN python3 -c "from sentence_transformers import CrossEncoder; CrossEncoder('BAAI/bge-reranker-v2-m3')"
 RUN python3 -c "from sentence_transformers import SentenceTransformer; SentenceTransformer('sentence-transformers/static-similarity-mrl-multilingual-v1')"
 
-COPY resources src predict.py /app/
+COPY resources /app/resources
+COPY src /app/src
+COPY predict.py /app/predict.py
+RUN python3 -c "import predict; from src.rules import RULES; assert len(RULES['expense_reimbursement']) == 7; assert len(RULES['procurement']) == 9"
 RUN chmod +x /app/predict.py
 
 ENTRYPOINT ["/app/predict.py"]
