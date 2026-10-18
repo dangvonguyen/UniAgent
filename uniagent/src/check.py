@@ -199,6 +199,12 @@ async def _check_rule(
     trace: Trace,
 ) -> RuleVerdict:
     rule = resolved.rule
+    if rule.id in PROCUREMENT_RULE_IDS:
+        from .procurement_check import _check_rule as check_procurement_rule
+
+        return await check_procurement_rule(
+            case_id, topic, case_documents, facts, resolved, llm, trace
+        )
     policy: LabeledPolicy = {
         f"E{i}": quote for i, quote in enumerate(resolved.quotes, start=1)
     }
@@ -218,18 +224,73 @@ async def _check_rule(
     if not case_documents:
         return _unknown(rule.id, "The case has no documents.")
 
+    if rule.id == "actual_expense_reconciliation":
+        from .reimbursement_reconciliation_scope import inspect_reconciliation_scope
+
+        scope = inspect_reconciliation_scope(case_documents)
+        trace.log(
+            "observation",
+            output={"rule_id": rule.id, "reconciliation_scope": scope.reasons},
+        )
+        if not scope.active:
+            return RuleVerdict(
+                rule_id=rule.id,
+                verdict="not_applicable",
+                reason="No repeated billing, credit/refund, or stated claim amount requires reconciliation.",
+            )
+
+    if rule.id == "private_purchase_eligibility":
+        from .reimbursement_route_scope import online_event_fee_scope
+        specialized = online_event_fee_scope(case_documents, topic)
+        if specialized is not None:
+            trace.log("observation", output={"rule_id": rule.id,
+                "route_scope": "online_event_fee",
+                "source_documents": [q.document for q in specialized.case_quotes]})
+            return specialized
+
     user = _build_user_message(
         topic, rule.check_text(), other_subjects, policy, case_documents, facts
     )
+    system_for_rule = SYSTEM
+    if rule.id == "hospitality_and_refreshments":
+        system_for_rule = SYSTEM.replace("## Steps\n", '\nInstitution and office names in case documents may be pseudonymized. When there is no positive indication of a different jurisdiction, compare the case under the retrieved governing policy; a name mismatch alone does not make that policy inapplicable.' + "\n## Steps\n", 1)
     try:
         answer = await llm.complete_json(
-            SYSTEM, user, CheckAnswer, context=f"{case_id}:check_rule:{rule.id}"
+            system_for_rule, user, CheckAnswer, context=f"{case_id}:check_rule:{rule.id}"
         )
     except Exception as error:  # noqa: BLE001
         trace.log("error", status="error", error=str(error))
         return _unknown(rule.id, f"LLM error: {error}")
 
-    return _to_verdict(rule.id, answer, policy, case_documents)
+    verdict = _to_verdict(rule.id, answer, policy, case_documents)
+    if rule.id == "private_purchase_eligibility":
+        from .reimbursement_route_evidence import guard_private_purchase
+
+        verdict, gate_reason = guard_private_purchase(verdict, topic)
+        if gate_reason:
+            trace.log(
+                "observation",
+                output={"rule_id": rule.id, "route_evidence_gate": gate_reason},
+            )
+    if rule.id == "hospitality_and_refreshments":
+        from .reimbursement_hospitality_evidence import guard_hospitality
+
+        verdict, issues, strength = guard_hospitality(verdict, case_documents)
+        trace.log(
+            "observation",
+            output={"rule_id": rule.id, "hospitality_evidence_gate": {
+                "issues": issues, "strength": strength,
+            }},
+        )
+    return verdict
+
+
+PROCUREMENT_RULE_IDS = frozenset({
+    "framework_contract_sourcing", "comparison_offers", "amount_calculation",
+    "document_consistency", "award_selection", "request_and_order_authority",
+    "asset_classification", "special_research_equipment_procedure",
+    "non_eu_import_procurement",
+})
 
 
 def _document_block(documents: LabeledDocuments) -> str:

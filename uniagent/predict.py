@@ -78,6 +78,14 @@ async def decide_case(
         trace.log("input", output={"documents": [d.name for d in case.documents]})
 
         verdicts = await check_case(case, rules, topic_rules, topic, llm, trace)
+        if case_type_for(case.case_id) == "procurement":
+            from src.procurement_decision import procurement_audit_verdicts
+
+            selected_rule_ids = {resolved.rule.id for resolved in rules}
+            verdicts.extend(v for v in procurement_audit_verdicts(
+                case_dir, rules, trace,
+                {document.name: document.text for document in case.documents},
+            ) if v.rule_id in selected_rule_ids)
         failed = any(v.verdict == "fail" for v in verdicts)
         decision = Decision(
             case_id=case.case_id,
@@ -156,6 +164,10 @@ async def main() -> None:
             )
         )
         rules: dict[CaseType, list[ResolvedRule]] = dict(zip(case_types, resolved))
+        if "procurement" in rules:
+            from src.procurement_scope_context import retain_retrieved_scope
+
+            await retain_retrieved_scope(rules["procurement"], index, trace)
 
         # Phase 3: decide each case against its domain's resolved rules, concurrently.
         print(f"Deciding {len(cases)} case(s)...", flush=True)
