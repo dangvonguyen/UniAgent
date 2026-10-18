@@ -4,8 +4,8 @@ from html import escape
 
 from pydantic import BaseModel
 
-from .llm import LLM
-from .models import (
+from ..llm import LLM
+from ..models import (
     CaseDocument,
     CaseQuote,
     PolicyQuote,
@@ -13,9 +13,9 @@ from .models import (
     RuleVerdict,
     Verdict,
 )
-from .quotes import match_case_quote
-from .text import normalize_chars
-from .tracelog import Trace
+from ..quotes import match_case_quote
+from ..text import normalize_chars
+from ..tracelog import Trace
 
 _LAYOUT_PADDING = re.compile(r" {3,}")
 # This is a separate budget for a citation-only correction, not the case
@@ -605,8 +605,8 @@ def _resolve_document(ref: str, documents: LabeledDocuments) -> CaseDocument | N
 
 
 # Consolidated procurement quote, scope and evidence checks.
-from .quotes import _locate
-from .text import normalize_text
+from ..quotes import _locate
+from ..text import normalize_text
 from .text_utils import norm_ws
 
 

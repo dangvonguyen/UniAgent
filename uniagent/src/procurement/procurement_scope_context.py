@@ -33,8 +33,8 @@ def adjacent_clauses(text: str) -> list[str]:
 
 async def retain_retrieved_scope(resolved_rules, index, trace) -> None:
     """Attach verified scope+duty pairs from the framework rule's top hits."""
-    from .config import DIGEST_CONTEXT_K, RETRIEVAL_DEPTH
-    from .models import PolicyQuote
+    from ..config import DIGEST_CONTEXT_K, RETRIEVAL_DEPTH
+    from ..models import PolicyQuote
 
     framework = next((r for r in resolved_rules
                       if r.rule.id == "framework_contract_sourcing"), None)

@@ -14,11 +14,11 @@ from dataclasses import asdict
 import re
 from pathlib import Path
 
-from .models import CaseQuote, PolicyQuote, ResolvedRule, RuleVerdict
+from ..models import CaseQuote, PolicyQuote, ResolvedRule, RuleVerdict
 from .obligation_gate import obligation_errors
 from .procurement_audit import Finding, audit_case, audit_coverage, policy_offer_count_from_quotes
-from .quotes import match_case_quote
-from .tracelog import Trace
+from ..quotes import match_case_quote
+from ..tracelog import Trace
 
 # Only two source-backed, material contradictions are enabled. The audit
 # extracts the underlying PDF text; it checks numerical materiality before

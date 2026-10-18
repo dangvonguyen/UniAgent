@@ -79,7 +79,7 @@ async def decide_case(
 
         verdicts = await check_case(case, rules, topic_rules, topic, llm, trace)
         if case_type_for(case.case_id) == "procurement":
-            from src.procurement_decision import procurement_audit_verdicts
+            from src.procurement.procurement_decision import procurement_audit_verdicts
 
             selected_rule_ids = {resolved.rule.id for resolved in rules}
             verdicts.extend(v for v in procurement_audit_verdicts(
@@ -165,7 +165,7 @@ async def main() -> None:
         )
         rules: dict[CaseType, list[ResolvedRule]] = dict(zip(case_types, resolved))
         if "procurement" in rules:
-            from src.procurement_scope_context import retain_retrieved_scope
+            from src.procurement.procurement_scope_context import retain_retrieved_scope
 
             await retain_retrieved_scope(rules["procurement"], index, trace)
 

@@ -200,7 +200,7 @@ async def _check_rule(
 ) -> RuleVerdict:
     rule = resolved.rule
     if rule.id in PROCUREMENT_RULE_IDS:
-        from .procurement_check import _check_rule as check_procurement_rule
+        from .procurement.procurement_check import _check_rule as check_procurement_rule
 
         return await check_procurement_rule(
             case_id, topic, case_documents, facts, resolved, llm, trace
@@ -225,7 +225,7 @@ async def _check_rule(
         return _unknown(rule.id, "The case has no documents.")
 
     if rule.id == "actual_expense_reconciliation":
-        from .reimbursement_checks import inspect_reconciliation_scope
+        from .reimbursement.checks import inspect_reconciliation_scope
 
         scope = inspect_reconciliation_scope(case_documents)
         trace.log(
@@ -240,7 +240,7 @@ async def _check_rule(
             )
 
     if rule.id == "private_purchase_eligibility":
-        from .reimbursement_checks import online_event_fee_scope
+        from .reimbursement.checks import online_event_fee_scope
         specialized = online_event_fee_scope(case_documents, topic)
         if specialized is not None:
             trace.log("observation", output={"rule_id": rule.id,
@@ -264,7 +264,7 @@ async def _check_rule(
 
     verdict = _to_verdict(rule.id, answer, policy, case_documents)
     if rule.id == "private_purchase_eligibility":
-        from .reimbursement_checks import guard_private_purchase
+        from .reimbursement.checks import guard_private_purchase
 
         verdict, gate_reason = guard_private_purchase(verdict, topic)
         if gate_reason:
@@ -273,7 +273,7 @@ async def _check_rule(
                 output={"rule_id": rule.id, "route_evidence_gate": gate_reason},
             )
     if rule.id == "hospitality_and_refreshments":
-        from .reimbursement_checks import guard_hospitality
+        from .reimbursement.checks import guard_hospitality
 
         verdict, issues, strength = guard_hospitality(verdict, case_documents)
         trace.log(
