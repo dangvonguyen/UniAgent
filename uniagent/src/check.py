@@ -252,7 +252,7 @@ async def _check_rule(
         topic, rule.check_text(), other_subjects, policy, case_documents, facts
     )
     system_for_rule = SYSTEM
-    if rule.id == "hospitality_and_refreshments":
+    if rule.id in ("hospitality_and_refreshments", "cost_purpose"):
         system_for_rule = SYSTEM.replace("## Steps\n", '\nInstitution and office names in case documents may be pseudonymized. When there is no positive indication of a different jurisdiction, compare the case under the retrieved governing policy; a name mismatch alone does not make that policy inapplicable.' + "\n## Steps\n", 1)
     try:
         answer = await llm.complete_json(
