@@ -167,9 +167,23 @@ async def _check_rule(
         return _unknown(rule.id, "The case has no documents.")
 
     user = _build_user_message(topic, rule.check, policy, case_documents, facts)
+    system = SYSTEM
+    if rule.id == "framework_contract_sourcing":
+        system += (
+            "\nPSEUDONYMIZED POLICY SCOPE\n"
+            "The case institution may have a pseudonym while a retrieved policy "
+            "retains its publisher's real name. For a matching product class and "
+            "procurement process, use the retrieved university policy unless the "
+            "case documents affirmatively show a different governing jurisdiction. "
+            "A name mismatch alone is not evidence of a different jurisdiction; "
+            "do not require a separate alias certificate. Still quote the policy's "
+            "product scope and the case's proposed supplier or ordering channel. "
+            "If documents identify a different jurisdiction, do not transfer the policy."
+        )
+
     try:
         answer = await llm.complete_json(
-            SYSTEM, user, CheckAnswer, context=f"{case_id}:check_rule:{rule.id}"
+            system, user, CheckAnswer, context=f"{case_id}:check_rule:{rule.id}"
         )
         problems = _answer_errors(rule.id, answer, policy, case_documents)
         if "missing-verified-case-quote" in problems:
@@ -227,7 +241,7 @@ async def _check_rule(
             try:
                 answer = await asyncio.wait_for(
                     llm.complete_json(
-                        SYSTEM,
+                        system,
                         user
                         + "\n\n<CITATION_FEEDBACK>\n"
                         f"The prior answer failed these source checks: {problems}. "
@@ -245,13 +259,13 @@ async def _check_rule(
                         CheckAnswer,
                         context=f"{case_id}:check_rule:{rule.id}:citation_retry",
                     ),
-                    timeout=CITATION_RETRY_BUDGET_SECONDS,
+                    timeout=(150 if rule.id == "framework_contract_sourcing" else CITATION_RETRY_BUDGET_SECONDS),
                 )
             except TimeoutError:
                 trace.log("observation", tool="rule_error", output={
                     "rule_id": rule.id,
                     "reason": "citation_retry_deadline_exceeded",
-                    "budget_seconds": CITATION_RETRY_BUDGET_SECONDS,
+                    "budget_seconds": (150 if rule.id == "framework_contract_sourcing" else CITATION_RETRY_BUDGET_SECONDS),
                     "initial_gate_errors": problems,
                 })
                 return _unknown(rule.id, "rule_error: citation_retry_deadline_exceeded")

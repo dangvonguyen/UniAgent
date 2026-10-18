@@ -23,7 +23,14 @@ _STOP = {"konventionelles", "konventionelle", "konventionellen", "einen", "eine"
 def _present(fragment: str, whole: str) -> bool:
     def compact(s):
         return " ".join(normalize_chars(s).lower().split())
-    return bool(fragment.strip()) and compact(fragment) in compact(whole)
+    if not fragment.strip():
+        return False
+    needle, haystack = compact(fragment), compact(whole)
+    if needle in haystack:
+        return True
+    # PDF text sometimes joins adjacent words (e.g. a heading and vendor).
+    # Preserve character order and every non-whitespace character.
+    return len(needle) >= 30 and needle.replace(" ", "") in haystack.replace(" ", "")
 
 
 def _category_terms(quote: str) -> set[str]:
@@ -95,6 +102,49 @@ def stage_errors(rule_id, verdict, refs, policy, documents, answer=None) -> list
     the request stage. This check only establishes timing; independent source,
     product-scope and exception checks still apply.
     """
+    if rule_id == "special_research_equipment_procedure" and verdict == "fail":
+        # A value bracket from a special scheme cannot govern all laboratory goods.
+        # Require a positive case-to-policy link to a named scheme or equipment class.
+        special = re.compile(
+            r"(?i)(?:Ger[aä]tefonds|Ger[aä]tefondsverfahren|Forschungsgro[ßs]ger[aä]t|"
+            r"Gro[ßs]ger[aä]tebeschaffung|large[- ]scale research equipment|"
+            r"device fund|equipment fund|special research equipment|DFG[- ](?:Ger[aä]te|equipment))"
+        )
+        cited_special = any(special.search(policy[r.strip().upper()].quote)
+                            for r in refs if r.strip().upper() in policy)
+        case_special = any(special.search(d.text) for d in documents.values())
+        if not (cited_special and case_special):
+            return ["special-procedure-product-or-scheme-scope-not-established"]
+        return []
+    if rule_id == "request_and_order_authority" and verdict == "fail":
+        # An optional written record cannot become a mandatory signature.
+        cited = "\n".join(policy[r.strip().upper()].quote for r in refs
+                          if r.strip().upper() in policy)
+        optional_record = re.search(
+            r"(?i)(?:evtl\.?|gegebenenfalls|optional|may)\s+(?:zus[aä]tzlich\s+)?"
+            r"(?:schriftlich|written|gegenzeichnen)", cited)
+        mandatory_written = re.search(
+            r"(?i)(?:muss|m[uü]ssen|shall|required)\s+[^.]{0,90}"
+            r"(?:schriftlich|Unterschrift|signature|written approval)", cited)
+        reason = getattr(answer, "reason", "") if answer is not None else ""
+        missing_proof = re.search(
+            r"(?i)(?:no explicit approval or signature|no (?:independent |written )?"
+            r"(?:approval|signature)|missing (?:approval|signature)|"
+            r"(?:keine|fehlende) (?:schriftliche )?(?:Best[aä]tigung|Unterschrift))",
+            reason)
+        contradiction = re.search(
+            r"(?i)(?:contradict|explicitly denied|unauthori[sz]ed|"
+            r"nicht beauftragt|ohne Zustimmung|abgelehnt)", reason)
+        commissioning = answer is not None and any(
+            re.search(r"(?i)\b(?:hat|haben|habe|has|have)\b.{0,110}"
+                      r"\bbeauftragt\b|\bcommissioned\b", q.quote)
+            and (doc := documents.get(q.source.strip().upper())) is not None
+            and match_case_quote(q.quote, doc.text) is not None
+            for q in answer.case_quotes
+        )
+        if optional_record and not mandatory_written and missing_proof and commissioning and not contradiction:
+            return ["optional-written-confirmation-treated-as-mandatory"]
+        return []
     if rule_id != "framework_contract_sourcing" or verdict != "fail":
         return []
     packet = "\n".join(d.text for d in documents.values())
@@ -103,11 +153,6 @@ def stage_errors(rule_id, verdict, refs, policy, documents, answer=None) -> list
     executed = re.search(r"(?i)\b(?:Auftragsbestätigung|Bestellnummer|"
                          r"bereits\s+bestellt|bestellt\s+am|order\s+placed|"
                          r"Rechnung\s+Nr\.)\b", packet)
-    request_duty = re.search(r"(?i)\b(?:vor\s+der\s+Bestellung|"
-                             r"Beschaffungsformular|bei\s+Beantragung|"
-                             r"Bestellanforderung|procurement\s+request|"
-                             r"bestell\w*\s+(?:woll\w*|m[oö]cht\w*|soll\w*)|"
-                             r"(?:woll\w*|m[oö]cht\w*)\s+[^.]{0,80}\bbestell\w*)\b", cited)
     ordering_duty = re.search(r"(?i)\b(?:bestell\w*|order\w*)\b", cited)
     proposed_external_route = False
     if answer is not None and ordering_duty:
@@ -122,12 +167,13 @@ def stage_errors(rule_id, verdict, refs, policy, documents, answer=None) -> list
         )
         proposed_external_route = bool(mandatory_channel) and any(
             departure.search(q.quote)
+            and not re.fullmatch(r"(?i)\s*(?:https?://|www\.)\S+\s*", q.quote)
             and (doc := documents.get(q.source.strip().upper())) is not None
             and match_case_quote(q.quote, doc.text) is not None
             for q in answer.case_quotes
         )
-    if not executed and ordering_duty and not request_duty and not proposed_external_route:
-        return ["ordering-duty-not-shown-due-at-request-stage"]
+    if not executed and ordering_duty and not proposed_external_route:
+        return ["proposed-external-route-not-cited-at-request-stage"]
     return []
 
 
