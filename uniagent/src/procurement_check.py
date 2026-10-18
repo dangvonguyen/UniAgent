@@ -14,16 +14,8 @@ from .models import (
     Verdict,
 )
 from .quotes import match_case_quote
-from .procurement_quote_parts import match_case_parts
 from .text import normalize_chars
 from .tracelog import Trace
-from .procurement_scope_gate import (
-    packet_has_applicable_direct_award_quote,
-    scope_errors,
-    stage_errors,
-    framework_provenance_errors,
-)
-from .procurement_evidence import decision_evidence_errors
 
 _LAYOUT_PADDING = re.compile(r" {3,}")
 # This is a separate budget for a citation-only correction, not the case
@@ -610,3 +602,335 @@ def _resolve_document(ref: str, documents: LabeledDocuments) -> CaseDocument | N
     if ref.upper() in documents:
         return documents[ref.upper()]
     return next((d for d in documents.values() if d.name.lower() == ref.lower()), None)
+
+
+# Consolidated procurement quote, scope and evidence checks.
+from .quotes import _locate
+from .text import normalize_text
+from .text_utils import norm_ws
+
+
+# From procurement_scope_gate.py
+_CATEGORY = re.compile(
+    r"\bF[uü]r\s+([\wäöüÄÖÜß -]{3,65}?)\s+"
+    r"(?:existiert|besteht|gilt|gelten|ist|sind)\b", re.I
+)
+
+
+_DIRECT_AWARD = re.compile(r"\b(?:Direktauftrag|Direktvergabe|direct award)\b", re.I)
+
+
+_STOP = {"konventionelles", "konventionelle", "konventionellen", "einen", "eine",
+         "dieses", "diese", "solche", "bestimmte", "bestimmten", "und", "oder"}
+
+
+def _present(fragment: str, whole: str) -> bool:
+    def compact(s):
+        return " ".join(normalize_chars(s).lower().split())
+    if not fragment.strip():
+        return False
+    needle, haystack = compact(fragment), compact(whole)
+    if needle in haystack:
+        return True
+    # PDF text sometimes joins adjacent words (e.g. a heading and vendor).
+    # Preserve character order and every non-whitespace character.
+    return len(needle) >= 30 and needle.replace(" ", "") in haystack.replace(" ", "")
+
+
+def _category_terms(quote: str) -> set[str]:
+    """Only explicit German category introductions, never a global ontology."""
+    matches = _CATEGORY.findall(quote)
+    return {word.casefold() for phrase in matches for word in re.findall(r"[\wäöüÄÖÜß]+", phrase)
+            if len(word) > 3 and word.casefold() not in _STOP}
+
+
+def packet_has_applicable_direct_award_quote(policy, documents) -> bool:
+    """Conservative retry check: does any method quote plausibly cover this case?
+
+    A method quote with no *explicit* product restriction is kept as possibly
+    applicable. This only skips retry when every quote about direct award has
+    an express category absent from the case packet (or none mentions it).
+    """
+    packet = "\n".join(d.text for d in documents.values()).casefold()
+    for source in policy.values():
+        if not _DIRECT_AWARD.search(source.quote):
+            continue
+        terms = _category_terms(source.quote)
+        if not terms or any(re.search(r"(?<!\w)" + re.escape(t) + r"\w*", packet)
+                            for t in terms):
+            return True
+    return False
+
+
+def scope_errors(rule_id, links, refs, policy, documents) -> list[str]:
+    if not links:
+        return ["missing-item-policy-scope-link"]
+    errors: list[str] = []
+    cited = {r.strip().upper() for r in refs}
+    all_case_text = "\n".join(d.text for d in documents.values()).casefold()
+    direct_award = rule_id == "comparison_offers" and bool(_DIRECT_AWARD.search(all_case_text))
+    method_resolved = False
+    linked = set()
+    for link in links:
+        ref = link.policy_ref.strip().upper()
+        source = policy.get(ref)
+        doc = documents.get(link.case_source.strip().upper())
+        if ref not in cited or source is None:
+            errors.append(f"scope-policy-ref-not-cited:{ref}")
+            continue
+        linked.add(ref)
+        if not _present(link.policy_scope, source.quote):
+            errors.append(f"scope-text-not-in-policy:{ref}")
+        if doc is None or match_case_quote(link.case_item, doc.text) is None:
+            errors.append(f"item-text-not-in-case:{ref}")
+        terms = _category_terms(source.quote)
+        item_text = link.case_item.casefold()
+        item_in_scope = not terms or any(
+            re.search(r"(?<!\w)" + re.escape(t) + r"\w*", item_text) for t in terms)
+        if not item_in_scope:
+            errors.append(f"explicit-product-scope-not-established:{ref}")
+        if direct_award and _DIRECT_AWARD.search(source.quote) and item_in_scope:
+            method_resolved = True
+    if direct_award and not method_resolved:
+        errors.append("claimed-direct-award-has-no-applicable-method-quote")
+    if not linked:
+        errors.append("no-valid-item-policy-link")
+    return list(dict.fromkeys(errors))
+
+
+def stage_errors(rule_id, verdict, refs, policy, documents, answer=None) -> list[str]:
+    """Check when an ordering duty attaches to a proposed purchase.
+
+    A request is not an executed order. A proposed source that is expressly
+    outside a cited mandatory procurement channel can already be reviewed at
+    the request stage. This check only establishes timing; independent source,
+    product-scope and exception checks still apply.
+    """
+    if rule_id == "special_research_equipment_procedure" and verdict == "fail":
+        # A value bracket from a special scheme cannot govern all laboratory goods.
+        # Require a positive case-to-policy link to a named scheme or equipment class.
+        special = re.compile(
+            r"(?i)(?:Ger[aä]tefonds|Ger[aä]tefondsverfahren|Forschungsgro[ßs]ger[aä]t|"
+            r"Gro[ßs]ger[aä]tebeschaffung|large[- ]scale research equipment|"
+            r"device fund|equipment fund|special research equipment|DFG[- ](?:Ger[aä]te|equipment))"
+        )
+        cited_special = any(special.search(policy[r.strip().upper()].quote)
+                            for r in refs if r.strip().upper() in policy)
+        case_special = any(special.search(d.text) for d in documents.values())
+        if not (cited_special and case_special):
+            return ["special-procedure-product-or-scheme-scope-not-established"]
+        return []
+    if rule_id == "request_and_order_authority" and verdict == "fail":
+        # An optional written record cannot become a mandatory signature.
+        cited = "\n".join(policy[r.strip().upper()].quote for r in refs
+                          if r.strip().upper() in policy)
+        optional_record = re.search(
+            r"(?i)(?:evtl\.?|gegebenenfalls|optional|may)\s+(?:zus[aä]tzlich\s+)?"
+            r"(?:schriftlich|written|gegenzeichnen)", cited)
+        mandatory_written = re.search(
+            r"(?i)(?:muss|m[uü]ssen|shall|required)\s+[^.]{0,90}"
+            r"(?:schriftlich|Unterschrift|signature|written approval)", cited)
+        reason = getattr(answer, "reason", "") if answer is not None else ""
+        missing_proof = re.search(
+            r"(?i)(?:no explicit approval or signature|no (?:independent |written )?"
+            r"(?:approval|signature)|missing (?:approval|signature)|"
+            r"(?:keine|fehlende) (?:schriftliche )?(?:Best[aä]tigung|Unterschrift))",
+            reason)
+        contradiction = re.search(
+            r"(?i)(?:contradict|explicitly denied|unauthori[sz]ed|"
+            r"nicht beauftragt|ohne Zustimmung|abgelehnt)", reason)
+        commissioning = answer is not None and any(
+            re.search(r"(?i)\b(?:hat|haben|habe|has|have)\b.{0,110}"
+                      r"\bbeauftragt\b|\bcommissioned\b", q.quote)
+            and (doc := documents.get(q.source.strip().upper())) is not None
+            and match_case_quote(q.quote, doc.text) is not None
+            for q in answer.case_quotes
+        )
+        if optional_record and not mandatory_written and missing_proof and commissioning and not contradiction:
+            return ["optional-written-confirmation-treated-as-mandatory"]
+        return []
+    if rule_id != "framework_contract_sourcing" or verdict != "fail":
+        return []
+    packet = "\n".join(d.text for d in documents.values())
+    cited = "\n".join(policy[r.strip().upper()].quote for r in refs
+                       if r.strip().upper() in policy)
+    executed = re.search(r"(?i)\b(?:Auftragsbestätigung|Bestellnummer|"
+                         r"bereits\s+bestellt|bestellt\s+am|order\s+placed|"
+                         r"Rechnung\s+Nr\.)\b", packet)
+    ordering_duty = re.search(r"(?i)\b(?:bestell\w*|order\w*)\b", cited)
+    proposed_external_route = False
+    if answer is not None and ordering_duty:
+        mandatory_channel = re.search(
+            r"(?i)(?:Rahmenvertragspartner|Rahmenvertragsprodukt|"
+            r"Rahmenvertr[aä]g\w*|\bWPS\b|framework\s+(?:contract|supplier))",
+            cited,
+        )
+        departure = re.compile(
+            r"(?i)(?:https?://|\bwww\.|\bWebshop\b|\bohne\s+WPS\b|"
+            r"\bau[ßs]erhalb\s+(?:des\s+)?Rahmenvertrags\b)"
+        )
+        proposed_external_route = bool(mandatory_channel) and any(
+            departure.search(q.quote)
+            and not re.fullmatch(r"(?i)\s*(?:https?://|www\.)\S+\s*", q.quote)
+            and (doc := documents.get(q.source.strip().upper())) is not None
+            and match_case_quote(q.quote, doc.text) is not None
+            for q in answer.case_quotes
+        )
+    if not executed and ordering_duty and not proposed_external_route:
+        return ["proposed-external-route-not-cited-at-request-stage"]
+    return []
+
+
+def framework_provenance_errors(answer, documents) -> list[str]:
+    """A verified framework cart defeats a *name-only* off-contract claim.
+
+    Supplier names may be pseudonymised. A matching WPS cart and request
+    establish the case's claimed route, not that its contract is legally valid.
+    If the model cites an explicit contrary ordering route, let the ordinary
+    policy/scope checks decide it. An uncited name difference is insufficient
+    to reject a pre-order request that includes a coherent framework cart.
+    """
+    if answer.verdict != "fail":
+        return []
+
+    def cart_ids(text):
+        return {m.casefold() for m in re.findall(
+            r"(?i)\bWarenkorb\s+([A-Z0-9][A-Z0-9-]{4,})\b", text)}
+
+    carts = [doc for doc in documents.values()
+             if cart_ids(doc.text)
+             and re.search(r"(?i)\bWPS\b", doc.text)
+             and re.search(r"(?i)\bRahmenvertrag\w*\b", doc.text)
+             and re.search(r"(?i)Lieferant\s*\(Rahmenvertragspartner\)", doc.text)]
+    coherent = any(
+        cart_ids(cart.text) & cart_ids(request.text)
+        for cart in carts for request in documents.values()
+        if cart is not request and re.search(r"(?i)Abruf\s+aus\s+Rahmenvertrag", request.text)
+    )
+    if not coherent:
+        return []
+
+    departure = re.compile(
+        r"(?i)(?:https?://|\bwww\.|\bWebshop\b|\bPreisvergleich\b|"
+        r"\bohne\s+WPS\b|\bau[ßs]erhalb\s+(?:des\s+)?Rahmenvertrags\b)"
+    )
+    for quote in answer.case_quotes:
+        doc = documents.get(quote.source.strip().upper())
+        if doc and match_case_quote(quote.quote, doc.text) and departure.search(quote.quote):
+            return []
+    return ["framework-cart-conflicts-with-uncited-off-contract-claim"]
+
+
+# From procurement_quote_parts.py
+def match_case_parts(quote: str | None, source: str) -> list[str]:
+    """Recover a short ellipsis citation as separate, real PDF excerpts.
+
+    Each part must match exactly after character/whitespace normalization,
+    occur in order, and lie within a six-line window. We never join the
+    pieces into a fabricated contiguous quotation.
+    """
+    direct = match_case_quote(quote, source)
+    if direct is not None:
+        return [direct]
+    if not quote or not re.search(r"(?:\.\.\.|…)", quote):
+        return []
+    parts = re.split(r"(?:\.\.\.|…)", quote)
+    if not 2 <= len(parts) <= 3 or any(
+            sum(c.isalnum() for c in part) < 14 for part in parts):
+        return []
+    text = normalize_text(source)
+    found = []
+    last = 0
+    first = None
+    for part in parts:
+        span = _locate(part, text, keep=str.isalnum, fuzzy=False)
+        if span is None or span[0] < last:
+            return []
+        if first is None:
+            first = span[0]
+        if text[first:span[1]].count("\n") > 6:
+            return []
+        found.append(text[span[0]:span[1]])
+        last = span[1]
+    return found
+
+
+# From procurement_evidence.py
+REQUIREMENT_KIND = {
+    "amount_calculation": re.compile(
+        r"(?i)(?:rechnerisch|rechnerische|richtig|korrekt|zutreffend|"
+        r"vollständig|accuracy|correct|calculation|Berechnung)"
+        r".{0,100}(?:Betrag|Preis|Summe|Kosten|Angab|amount|price|total)|"
+        r"(?:Betrag|Preis|Summe|Kosten|Angab|amount|price|total)"
+        r".{0,100}(?:rechnerisch|richtig|korrekt|zutreffend|vollständig|"
+        r"accuracy|correct|calculation|Berechnung)"
+    ),
+    "document_consistency": re.compile(
+        r"(?i)(?:richtig|zutreffend|vollständig|übereinstimm|"
+        r"nachweis|beleg|accurate|consistent|supporting document)"
+        r".{0,100}(?:Antrag|Angebot|Preis|Betrag|Unterlag|Angab|request|offer)|"
+        r"(?:Antrag|Angebot|Preis|Betrag|Unterlag|Angab|request|offer)"
+        r".{0,100}(?:richtig|zutreffend|vollständig|übereinstimm|"
+        r"nachweis|beleg|accurate|consistent|supporting document)"
+    ),
+    "award_selection": re.compile(
+        r"(?i)(?:Zuschlag|Auftragsvergabe|award|ausgewählt|selection)"
+        r".{0,120}(?:wirtschaftlich|günstig|niedrig|Kriteri|criterion|"
+        r"price|Preis)|(?:wirtschaftlich|günstig|niedrig|Kriteri|"
+        r"criterion|price|Preis).{0,120}(?:Zuschlag|Auftragsvergabe|"
+        r"award|ausgewählt|selection)"
+    ),
+}
+
+
+DISCLOSURE_ONLY = re.compile(
+    r"(?i)(?:bekannt\s*zu\s*geben|bekanntmach|offenleg|publizier|"
+    r"publish|disclos|communicat)"
+)
+
+
+MANDATORY = re.compile(
+    r"(?i)\b(?:muss|müssen|darf|dürfen|hat\b[^.]{0,70}\bzu\b|"
+    r"haben\b[^.]{0,70}\bzu\b|ist\b[^.]{0,70}\bzu\b|"
+    r"sind\b[^.]{0,70}\bzu\b|must|shall|required)\b"
+)
+
+
+AWARD_DECISION = re.compile(
+    r"(?i)(?:Zuschlag\s+(?:ist|muss|soll|darf|erfolgt|wird)|"
+    r"(?:award|contract)\s+(?:must|shall|is\s+to|goes\s+to)|"
+    r"wirtschaftlichst\w*\s+Angebot\s+\w*\s+(?:Zuschlag|ausgewählt))"
+)
+
+
+def decision_evidence_errors(rule_id, links, refs, policy, documents) -> list[str]:
+    """Require a source-backed fact and a relevant operative duty for pass/fail."""
+    if not links:
+        return ["missing-decision-evidence-link"]
+    cited = {ref.strip().upper() for ref in refs}
+    kind = REQUIREMENT_KIND.get(rule_id)
+    errors: list[str] = []
+    for link in links:
+        ref = link.policy_ref.strip().upper()
+        source = policy.get(ref)
+        doc = documents.get(link.case_source.strip().upper())
+        if ref not in cited or source is None:
+            errors.append(f"evidence-policy-ref-not-cited:{ref}")
+            continue
+        span = link.policy_obligation.strip()
+        if len(norm_ws(span)) < 30 or norm_ws(span) not in norm_ws(source.quote):
+            errors.append(f"evidence-obligation-not-in-policy:{ref}")
+            continue
+        if not MANDATORY.search(span):
+            errors.append(f"evidence-no-mandatory-language:{ref}")
+        if kind is not None and not kind.search(span):
+            errors.append(f"evidence-obligation-kind-not-established:{ref}")
+        if (rule_id == "award_selection" and DISCLOSURE_ONLY.search(span)
+                and not AWARD_DECISION.search(span)):
+            errors.append(f"evidence-only-requires-disclosure:{ref}")
+        if not doc or len(norm_ws(link.case_fact)) < 12 or not match_case_quote(
+                link.case_fact, doc.text):
+            errors.append(f"evidence-fact-not-in-case:{ref}")
+        if not link.stage.strip():
+            errors.append(f"evidence-stage-missing:{ref}")
+    return list(dict.fromkeys(errors))

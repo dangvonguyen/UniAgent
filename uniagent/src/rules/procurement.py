@@ -1,9 +1,6 @@
 from src.models import Rule
 
-from .procurement_comparison_offers import PROCUREMENT_RULES as COMPARISON_OFFERS
-from .procurement_amount_calculation import PROCUREMENT_RULES as AMOUNT_CALCULATION
-from .procurement_document_consistency import PROCUREMENT_RULES as DOCUMENT_CONSISTENCY
-from .procurement_award_selection import PROCUREMENT_RULES as AWARD_SELECTION
+from .procurement_task2 import TASK2_PROCUREMENT_RULES
 
 
 # Five separate subjects; policy obligations come from the retrieved corpus.
@@ -70,11 +67,4 @@ PROCUREMENT_RULES: list[Rule] = [
     ),
 ]
 
-PROCUREMENT_RULES.extend(
-    COMPARISON_OFFERS + AMOUNT_CALCULATION + DOCUMENT_CONSISTENCY + AWARD_SELECTION
-)
-
-# BEGIN UniAgent four procurement candidate rules
-from .procurement_extra import EXTRA_PROCUREMENT_RULES as _EXTRA_PROCUREMENT_RULES
-PROCUREMENT_RULES.extend(_EXTRA_PROCUREMENT_RULES)
-# END UniAgent four procurement candidate rules
+PROCUREMENT_RULES.extend(TASK2_PROCUREMENT_RULES)
