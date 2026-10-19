@@ -255,7 +255,7 @@ async def _check_rule(
             return specialized
 
     if rule.id == "trip_approval":
-        from .business_evidence import date_finding
+        from .business.evidence import date_finding
         finding = date_finding({key: doc.text for key, doc in case_documents.items()})
         trace.log("observation", output={"rule_id": rule.id, "business_date_finding": finding})
         if finding["status"] == "fail" and finding["schedule_inconsistent_under_all_interpretations"]:
@@ -272,7 +272,7 @@ async def _check_rule(
     )
     funding_lines = []
     if rule.id == "third_party_funding":
-        from .business_evidence import funding_candidates
+        from .business.evidence import funding_candidates
         funding_lines = funding_candidates({key: doc.text for key, doc in case_documents.items()})
         trace.log("observation", output={"rule_id": rule.id,
                                          "funding_candidate_line_ids": [line["line_id"] for line in funding_lines]})
@@ -309,7 +309,7 @@ async def _check_rule(
             }},
         )
     if rule.id == "third_party_funding":
-        from .business_evidence import (funding_case_stage, guard_funding_fail,
+        from .business.evidence import (funding_case_stage, guard_funding_fail,
                                         possible_external_awards, reviewed_funding_clauses)
         import json
         stage = funding_case_stage({key: doc.text for key, doc in case_documents.items()})
