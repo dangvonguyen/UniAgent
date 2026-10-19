@@ -114,6 +114,12 @@ class CheckAnswer(BaseModel):
     policy_refs: list[str] = []
 
 
+class FundingCheckAnswer(CheckAnswer):
+    candidate_classifications: list[dict] = []
+    conditions_used: list[dict] = []
+    funding_clause_ref: str | None = None
+
+
 # Maps a prompt label ("E1", "C1", ...) to the object behind it.
 LabeledPolicy = dict[str, PolicyQuote]
 LabeledDocuments = dict[str, CaseDocument]
@@ -248,15 +254,35 @@ async def _check_rule(
                 "source_documents": [q.document for q in specialized.case_quotes]})
             return specialized
 
+    if rule.id == "trip_approval":
+        from .business_evidence import date_finding
+        finding = date_finding({key: doc.text for key, doc in case_documents.items()})
+        trace.log("observation", output={"rule_id": rule.id, "business_date_finding": finding})
+        if finding["status"] == "fail" and finding["schedule_inconsistent_under_all_interpretations"]:
+            return RuleVerdict(
+                rule_id=rule.id, verdict="fail",
+                reason="The application's own trip and business-activity dates contradict each other under every valid interpretation of the recorded date strings. [basis: code_date_check; policy_ref: none]",
+                case_quotes=[CaseQuote(document=case_documents[line["document"]].name,
+                                       quote=line["text"])
+                             for line in finding["source_lines"]],
+            )
+
     user = _build_user_message(
         topic, rule.check_text(), other_subjects, policy, case_documents, facts
     )
+    funding_lines = []
+    if rule.id == "third_party_funding":
+        from .business_evidence import funding_candidates
+        funding_lines = funding_candidates({key: doc.text for key, doc in case_documents.items()})
+        trace.log("observation", output={"rule_id": rule.id,
+                                         "funding_candidate_line_ids": [line["line_id"] for line in funding_lines]})
     system_for_rule = SYSTEM
     if rule.id in ("hospitality_and_refreshments", "cost_purpose"):
         system_for_rule = SYSTEM.replace("## Steps\n", '\nInstitution and office names in case documents may be pseudonymized. When there is no positive indication of a different jurisdiction, compare the case under the retrieved governing policy; a name mismatch alone does not make that policy inapplicable.' + "\n## Steps\n", 1)
+    answer_schema = CheckAnswer
     try:
         answer = await llm.complete_json(
-            system_for_rule, user, CheckAnswer, context=f"{case_id}:check_rule:{rule.id}"
+            system_for_rule, user, answer_schema, context=f"{case_id}:check_rule:{rule.id}"
         )
     except Exception as error:  # noqa: BLE001
         trace.log("error", status="error", error=str(error))
@@ -282,6 +308,58 @@ async def _check_rule(
                 "issues": issues, "strength": strength,
             }},
         )
+    if rule.id == "third_party_funding":
+        from .business_evidence import (funding_case_stage, guard_funding_fail,
+                                        possible_external_awards, reviewed_funding_clauses)
+        import json
+        stage = funding_case_stage({key: doc.text for key, doc in case_documents.items()})
+        policy_text = {key: quote.quote for key, quote in policy.items()}
+        classifications, conditions, clause_ref = [], [], None
+        proof_error = None
+        if (verdict.verdict == "fail" and stage == "expense_claim"
+                and reviewed_funding_clauses(policy_text)):
+            proof_user = (user + "\n\n<funding_candidates>\n"
+                          + json.dumps(funding_lines, ensure_ascii=False)
+                          + "\n</funding_candidates>\nReturn ONE JSON OBJECT with the normal verdict, reason and citation fields plus candidate_classifications (one item for each line_id), conditions_used and funding_clause_ref. Classify the payer, covered items and payment status using source line IDs. A top-level array is invalid. If a field cannot be verified, use unknown.")
+            try:
+                proof = await llm.complete_json(
+                    system_for_rule, proof_user, FundingCheckAnswer,
+                    context=f"{case_id}:check_rule:{rule.id}:typed_proof")
+                if proof.verdict == "fail":
+                    classifications = proof.candidate_classifications
+                    conditions = proof.conditions_used
+                    clause_ref = proof.funding_clause_ref
+                else:
+                    proof_error = "typed_proof_not_fail"
+            except Exception as error:  # noqa: BLE001
+                proof_error = f"typed_proof_error:{type(error).__name__}"
+                trace.log("error", status="error", error=f"funding typed proof: {error}")
+        gate = guard_funding_fail(
+            verdict=verdict.verdict, candidates=funding_lines,
+            classifications=classifications, conditions=conditions,
+            policy=policy_text, clause_ref=clause_ref, case_stage=stage,
+        )
+        if proof_error:
+            gate["issues"] = sorted(set(gate["issues"] + [proof_error]))
+        pending_award_lines = possible_external_awards(funding_lines)
+        if verdict.verdict in ("pass", "not_applicable") and pending_award_lines:
+            gate["verdict"] = "unknown"
+            gate["issues"] = sorted(set(gate["issues"] + ["unresolved_external_award"]))
+        gate["pending_award_lines"] = pending_award_lines
+        trace.log("observation", output={"rule_id": rule.id, "business_funding_gate": gate})
+        if gate["verdict"] != verdict.verdict:
+            if "unresolved_external_award" in gate["issues"]:
+                explanation = ("An external funding award is documented, but its effect on the current "
+                               "decision stage is not established by the verified case lines and "
+                               "selected applicable policy passages.")
+            else:
+                explanation = ("The proposed funding violation lacks complete source and "
+                               "stage-specific policy proof.")
+            verdict = verdict.model_copy(update={
+                "verdict": gate["verdict"],
+                "reason": explanation + " [Evidence gate: " + ",".join(gate["issues"]) + "]",
+                "policy_quotes": [],
+            })
     return verdict
 
 
